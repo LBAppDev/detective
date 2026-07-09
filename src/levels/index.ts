@@ -1,0 +1,14 @@
+import type { LevelConfig } from './types';
+import bedroom from './bedroom';
+import office from './office';
+
+/**
+ * Level registry. To add a room: create src/levels/<room>.tsx exporting
+ * a LevelConfig, then register it here — no engine changes required.
+ */
+export const LEVELS: Record<string, LevelConfig> = {
+  [bedroom.id]: bedroom,
+  [office.id]: office,
+};
+
+export const FIRST_LEVEL = bedroom.id;

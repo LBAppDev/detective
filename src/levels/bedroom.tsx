@@ -1,0 +1,485 @@
+/**
+ * Level: The Bedroom.
+ * Self-contained room definition — scene shell, models, object/hotspot
+ * configs, puzzle logic, and unlock condition. The core engine
+ * (RoomObjects, Interactable, DoorPrompt, App) consumes this as data.
+ *
+ * Puzzle state uses namespaced flags in the global store, e.g.
+ * flags['bedroom.rugMoved'], so no store changes are needed per room.
+ */
+import { useMemo, useRef, type ComponentType } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { Color, Group, MathUtils, Mesh, MeshStandardMaterial } from 'three';
+import { useGameStore } from '../store/gameStore';
+import { useFlagTween } from '../engine/useFlagTween';
+import RoomObjects from '../components/RoomObjects';
+import RoomShell from '../components/RoomShell';
+import type { LevelConfig, RoomObjectConfig } from './types';
+
+const ROOM = { width: 10, depth: 10, wallHeight: 4 };
+
+const COLORS = {
+  floor: '#a8794f', // warm wood
+  wallTeal: '#4f7d7a', // back wall
+  wallBeige: '#d9c7a7', // side wall
+  bedFrame: '#6e4a2f',
+  mattress: '#e8e0d0',
+  blanket: '#4e7d7a',
+  pillow: '#f4efe4',
+  rug: '#8a4f57',
+  desk: '#7a5230',
+  lampCord: '#2b2b30',
+  lampBulb: '#ffe9b8',
+  note: '#e9e4d2',
+};
+
+/** Namespaced puzzle flags for this room. */
+const FLAGS = {
+  rugMoved: 'bedroom.rugMoved',
+  suitcaseOpen: 'bedroom.suitcaseOpen',
+};
+
+/* ------------------------------------------------------------------ */
+/* Object/hotspot config                                                */
+/* ------------------------------------------------------------------ */
+
+const OBJECTS: RoomObjectConfig[] = [
+  {
+    id: 'bed',
+    name: 'bed',
+    position: [1.8, 0, -3.4],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Bed',
+      text: 'Neatly made, corners tucked. No one slept here that night.',
+    },
+  },
+  {
+    id: 'desk',
+    name: 'desk',
+    position: [-4.1, 0, 1.6],
+    rotation: [0, Math.PI / 2, 0],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Desk',
+      text: 'A clean rectangle in the dust where a laptop used to sit. Someone took it in a hurry.',
+    },
+  },
+  {
+    id: 'rug',
+    name: 'rug',
+    position: [0.6, 0, 0.8],
+    interactable: true,
+    interaction: {
+      type: 'actions',
+      actions: [{ flag: FLAGS.rugMoved }, { sound: 'slide' }],
+    },
+  },
+  {
+    id: 'lamp',
+    name: 'lamp',
+    position: [0.6, 0, 0.8],
+    interactable: true,
+    // Clicking the lamp opens/closes the lighting control panel.
+    interaction: { type: 'custom', run: () => useGameStore.getState().toggleLightPanel() },
+  },
+  {
+    id: 'hidden-box',
+    name: 'matchbox',
+    position: [-4.75, 0, 1.6],
+    interactable: true,
+    // Kicked behind the desk — its notebook entry holds the suitcase code.
+    visible: (s) => !s.inventory.includes('matchbox'),
+    interaction: { type: 'collect', item: 'matchbox' },
+  },
+  {
+    id: 'suitcase',
+    name: 'locked suitcase',
+    position: [3.9, 0, -2.6],
+    rotation: [0, -0.35, 0],
+    interactable: true,
+    requires: (s) => !s.flags[FLAGS.suitcaseOpen],
+    failText: 'The suitcase is already open — the ticket was all it held.',
+    interaction: {
+      type: 'code',
+      title: 'Suitcase combination',
+      answer: '4729',
+      onSuccess: [
+        { flag: FLAGS.suitcaseOpen },
+        { collect: 'train_ticket' },
+        { sound: 'success' },
+      ],
+      onFail: [{ toast: 'The latch refuses to budge.' }],
+    },
+  },
+  {
+    id: 'wall-symbol',
+    name: 'wall symbol',
+    position: [-2.2, 2.3, -4.9],
+    interactable: true,
+    // Stays in the scene until collected (it fades in/out with the UV lamp).
+    // Its hitbox only exists under UV, so it can't be clicked while hidden.
+    visible: (s) => !s.inventory.includes('wall_symbol_clue'),
+    interaction: { type: 'collect', item: 'wall_symbol_clue' },
+  },
+  {
+    id: 'bedroom-key',
+    name: 'bedroom key',
+    position: [0.6, 0, 0.8],
+    interactable: true,
+    // Hidden under the rug; disappears once collected.
+    visible: (s) => !!s.flags[FLAGS.rugMoved] && !s.inventory.includes('bedroom_key'),
+    interaction: { type: 'collect', item: 'bedroom_key' },
+  },
+];
+
+/* ------------------------------------------------------------------ */
+/* Models (local origin — placed via the OBJECTS config)               */
+/* ------------------------------------------------------------------ */
+
+function Bed() {
+  return (
+    <group>
+      {/* frame */}
+      <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.4, 0.4, 3.2]} />
+        <meshStandardMaterial color={COLORS.bedFrame} />
+      </mesh>
+      {/* headboard */}
+      <mesh position={[0, 0.85, -1.55]} castShadow>
+        <boxGeometry args={[2.4, 0.9, 0.12]} />
+        <meshStandardMaterial color={COLORS.bedFrame} />
+      </mesh>
+      {/* mattress */}
+      <mesh position={[0, 0.62, 0.05]} castShadow>
+        <boxGeometry args={[2.15, 0.3, 3]} />
+        <meshStandardMaterial color={COLORS.mattress} />
+      </mesh>
+      {/* blanket */}
+      <mesh position={[0, 0.79, 0.65]} castShadow>
+        <boxGeometry args={[2.16, 0.12, 1.7]} />
+        <meshStandardMaterial color={COLORS.blanket} />
+      </mesh>
+      {/* pillow */}
+      <mesh position={[0, 0.84, -1.05]} castShadow>
+        <boxGeometry args={[1.1, 0.18, 0.55]} />
+        <meshStandardMaterial color={COLORS.pillow} />
+      </mesh>
+    </group>
+  );
+}
+
+function Desk() {
+  return (
+    <group>
+      {/* desktop */}
+      <mesh position={[0, 1.05, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.2, 0.12, 1]} />
+        <meshStandardMaterial color={COLORS.desk} />
+      </mesh>
+      {/* back panel (blocks the view of what's behind the desk) */}
+      <mesh position={[0, 0.55, -0.44]} castShadow>
+        <boxGeometry args={[2.2, 0.9, 0.08]} />
+        <meshStandardMaterial color={COLORS.desk} />
+      </mesh>
+      {/* legs */}
+      {[-1, 1].map((sx) =>
+        [-1, 1].map((sz) => (
+          <mesh key={`${sx}${sz}`} position={[sx * 1.0, 0.5, sz * 0.42]} castShadow>
+            <boxGeometry args={[0.12, 1, 0.12]} />
+            <meshStandardMaterial color={COLORS.desk} />
+          </mesh>
+        )),
+      )}
+    </group>
+  );
+}
+
+function Rug() {
+  // Slides aside when the flag flips — no per-object animation code.
+  const ref = useFlagTween(FLAGS.rugMoved, {
+    position: { from: [0, 0, 0], to: [2.3, 0, 0.6] },
+  });
+
+  return (
+    <group ref={ref}>
+      <mesh position={[0, 0.011, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[1.7, 32]} />
+        <meshStandardMaterial color={COLORS.rug} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Locked suitcase by the bed; lid swings open via a flag tween. */
+function Suitcase() {
+  const lidRef = useFlagTween(FLAGS.suitcaseOpen, {
+    rotation: { from: [0, 0, 0], to: [-2.0, 0, 0] },
+    speed: 4,
+  });
+  const open = useGameStore((s) => !!s.flags[FLAGS.suitcaseOpen]);
+
+  return (
+    <group>
+      {/* body */}
+      <mesh position={[0, 0.22, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.1, 0.44, 0.7]} />
+        <meshStandardMaterial color="#6b4a3a" />
+      </mesh>
+      {/* latches */}
+      {[-0.3, 0.3].map((x) => (
+        <mesh key={x} position={[x, 0.3, 0.36]} castShadow>
+          <boxGeometry args={[0.1, 0.08, 0.03]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+        </mesh>
+      ))}
+      {/* lid, hinged at the back top edge */}
+      <group ref={lidRef} position={[0, 0.44, -0.35]}>
+        <mesh position={[0, 0.05, 0.35]} castShadow>
+          <boxGeometry args={[1.1, 0.1, 0.7]} />
+          <meshStandardMaterial color="#5d4033" />
+        </mesh>
+      </group>
+      {/* ticket stub visible once opened */}
+      {open && (
+        <mesh position={[0, 0.45, 0.05]} rotation={[-Math.PI / 2, 0, 0.25]}>
+          <planeGeometry args={[0.5, 0.24]} />
+          <meshStandardMaterial color="#e9e4d2" />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/** Small brass key revealed under the rug. */
+function BedroomKey() {
+  return (
+    <group position={[0, 0.05, 0]} rotation={[0, 0.6, 0]}>
+      {/* shaft */}
+      <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.035, 0.035, 0.45, 10]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+      </mesh>
+      {/* bow (head ring) */}
+      <mesh position={[-0.28, 0, 0]} castShadow>
+        <torusGeometry args={[0.09, 0.035, 8, 16]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+      </mesh>
+      {/* teeth */}
+      <mesh position={[0.16, -0.07, 0]} castShadow>
+        <boxGeometry args={[0.05, 0.1, 0.05]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+      </mesh>
+      <mesh position={[0.24, -0.06, 0]} castShadow>
+        <boxGeometry args={[0.05, 0.08, 0.05]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+function CeilingLamp() {
+  const { wallHeight } = ROOM;
+  const uv = useGameStore((s) => s.lampColor === 'uv');
+  const bulbColor = uv ? '#6a2bd8' : COLORS.lampBulb;
+  const glowColor = uv ? '#8a2bff' : '#ffd9a0';
+  return (
+    <group>
+      {/* cord */}
+      <mesh position={[0, wallHeight - 0.6, 0]}>
+        <cylinderGeometry args={[0.02, 0.02, 1.2, 8]} />
+        <meshStandardMaterial color={COLORS.lampCord} />
+      </mesh>
+      {/* bulb */}
+      <mesh position={[0, wallHeight - 1.25, 0]}>
+        <sphereGeometry args={[0.18, 16, 16]} />
+        <meshStandardMaterial
+          color={bulbColor}
+          emissive={glowColor}
+          emissiveIntensity={uv ? 1.4 : 0.9}
+        />
+      </mesh>
+      {/* glow */}
+      <pointLight
+        position={[0, wallHeight - 1.3, 0]}
+        intensity={uv ? 9 : 6}
+        distance={9}
+        decay={1.5}
+        color={glowColor}
+      />
+    </group>
+  );
+}
+
+/**
+ * Hidden wall clue — invisible ink that only shows under UV light.
+ * Reveal is driven by lerping emissiveIntensity/opacity toward the
+ * lamp color state each frame.
+ */
+function WallClue() {
+  const ref = useRef<Group>(null);
+  const reveal = useRef(0);
+  const uv = useGameStore((s) => s.lampColor === 'uv');
+
+  useFrame((_, dt) => {
+    reveal.current = MathUtils.damp(reveal.current, uv ? 1 : 0, 4, dt);
+    ref.current?.traverse((obj) => {
+      if (!(obj instanceof Mesh) || !obj.userData.isClueInk) return;
+      const mat = obj.material;
+      if (!(mat instanceof MeshStandardMaterial)) return;
+      mat.emissiveIntensity = reveal.current * 2.2;
+      mat.opacity = reveal.current;
+    });
+  });
+
+  const ink = (
+    <meshStandardMaterial
+      color="#0d081c"
+      emissive="#b18cff"
+      emissiveIntensity={0}
+      transparent
+      opacity={0}
+    />
+  );
+
+  return (
+    <group ref={ref}>
+      {/* Ink meshes opt out of raycasting: only the UV-gated hitbox below
+          is clickable, so the hidden clue is silent until revealed. */}
+      {/* circle */}
+      <mesh userData={{ isClueInk: true }} raycast={() => null}>
+        <torusGeometry args={[0.45, 0.05, 8, 24]} />
+        {ink}
+      </mesh>
+      {/* cross-through bars */}
+      <mesh rotation={[0, 0, Math.PI / 4]} userData={{ isClueInk: true }} raycast={() => null}>
+        <boxGeometry args={[1.1, 0.07, 0.02]} />
+        {ink}
+      </mesh>
+      <mesh rotation={[0, 0, -Math.PI / 4]} userData={{ isClueInk: true }} raycast={() => null}>
+        <boxGeometry args={[1.1, 0.07, 0.02]} />
+        {ink}
+      </mesh>
+      {/* three marks beneath */}
+      {[-0.2, 0, 0.2].map((x) => (
+        <mesh
+          key={x}
+          position={[x, -0.75, 0]}
+          userData={{ isClueInk: true }}
+          raycast={() => null}
+        >
+          <boxGeometry args={[0.06, 0.22, 0.02]} />
+          {ink}
+        </mesh>
+      ))}
+      {/* invisible hitbox — only present while the clue is revealed,
+          so the hidden clue can't be hovered/clicked by accident */}
+      {uv && (
+        <mesh>
+          <planeGeometry args={[1.4, 1.8]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function HiddenBox() {
+  return (
+    <mesh position={[0, 0.09, 0]} castShadow>
+      <boxGeometry args={[0.18, 0.18, 0.24]} />
+      <meshStandardMaterial color={COLORS.note} />
+    </mesh>
+  );
+}
+
+const MODELS: Record<string, ComponentType> = {
+  bed: Bed,
+  desk: Desk,
+  rug: Rug,
+  lamp: CeilingLamp,
+  suitcase: Suitcase,
+  'hidden-box': HiddenBox,
+  'bedroom-key': BedroomKey,
+  'wall-symbol': WallClue,
+};
+
+/* ------------------------------------------------------------------ */
+/* Scene                                                                */
+/* ------------------------------------------------------------------ */
+
+/** Ambient + directional light driven by the time-of-day slider. */
+function RoomLighting() {
+  const timeOfDay = useGameStore((s) => s.timeOfDay);
+  const ambIntensity = MathUtils.lerp(0.14, 0.55, timeOfDay);
+  const dirIntensity = MathUtils.lerp(0.15, 2, timeOfDay);
+  const ambColor = useMemo(
+    () => new Color('#8899cc').lerp(new Color('#ffe9cf'), timeOfDay),
+    [timeOfDay],
+  );
+  const dirColor = useMemo(
+    () => new Color('#7788dd').lerp(new Color('#ffdcb0'), timeOfDay),
+    [timeOfDay],
+  );
+  return (
+    <>
+      <ambientLight intensity={ambIntensity} color={ambColor} />
+      <directionalLight
+        position={[6, 10, 4]}
+        intensity={dirIntensity}
+        color={dirColor}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+      />
+    </>
+  );
+}
+
+function BedroomScene() {
+  return (
+    <group>
+      {/* Lighting (reacts to time-of-day slider) */}
+      <RoomLighting />
+
+      {/* Full room enclosure — walls/ceiling hide themselves based on camera POV */}
+      <RoomShell
+        width={ROOM.width}
+        depth={ROOM.depth}
+        height={ROOM.wallHeight}
+        floorColor={COLORS.floor}
+        ceilingColor="#eae2d3"
+        wallColors={{
+          back: COLORS.wallTeal,
+          front: COLORS.wallTeal,
+          left: COLORS.wallBeige,
+          right: COLORS.wallBeige,
+        }}
+      />
+
+      {/* Config-driven objects/hotspots */}
+      <RoomObjects objects={OBJECTS} models={MODELS} />
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Level definition                                                     */
+/* ------------------------------------------------------------------ */
+
+const bedroom: LevelConfig = {
+  id: 'bedroom',
+  name: 'The Bedroom',
+  Scene: BedroomScene,
+  lightingPanel: true,
+  unlock: {
+    requiredItems: ['bedroom_key', 'wall_symbol_clue'],
+    nextLevel: 'office',
+    title: '🗝️ Door Unlocked',
+    text: 'The brass key fits the bedroom door. There is nothing more to find here.',
+    buttonLabel: 'Go to the Office →',
+  },
+};
+
+export default bedroom;
