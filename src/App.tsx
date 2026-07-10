@@ -1,16 +1,30 @@
+import { useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import { MathUtils } from 'three';
 import Toast from './components/Toast';
 import Notebook from './components/Notebook';
 import LightingPanel from './components/LightingPanel';
-import DoorPrompt from './components/DoorPrompt';
 import ModalHost from './components/ModalHost';
+import TitleScreen from './components/TitleScreen';
+import ObjectiveHud from './components/ObjectiveHud';
+import RestartButton from './components/RestartButton';
+import { setAmbienceLevel } from './engine/feedback';
 import { useGameStore } from './store/gameStore';
 import { LEVELS, FIRST_LEVEL } from './levels';
 
 export default function App() {
+  const phase = useGameStore((s) => s.phase);
   const currentLevel = useGameStore((s) => s.currentLevel);
+  const timeOfDay = useGameStore((s) => s.timeOfDay);
   const level = LEVELS[currentLevel] ?? LEVELS[FIRST_LEVEL];
+
+  // Nights feel quieter — scale the room tone with the time-of-day slider.
+  useEffect(() => {
+    setAmbienceLevel(MathUtils.lerp(0.55, 1, timeOfDay));
+  }, [timeOfDay]);
+
+  if (phase === 'title') return <TitleScreen />;
 
   return (
     <>
@@ -39,8 +53,9 @@ export default function App() {
     <Toast />
     <Notebook />
     <ModalHost />
+    <ObjectiveHud />
+    <RestartButton />
     {level.lightingPanel && <LightingPanel />}
-    <DoorPrompt />
     {level.placeholderLabel && <div className="level-label">{level.placeholderLabel}</div>}
     </>
   );

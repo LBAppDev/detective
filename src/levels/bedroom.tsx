@@ -1,16 +1,17 @@
 /**
  * Level: The Bedroom.
  * Self-contained room definition — scene shell, models, object/hotspot
- * configs, puzzle logic, and unlock condition. The core engine
- * (RoomObjects, Interactable, DoorPrompt, App) consumes this as data.
+ * configs, puzzle logic, and the exit door. The core engine
+ * (RoomObjects, Interactable, App) consumes this as data.
  *
  * Puzzle state uses namespaced flags in the global store, e.g.
  * flags['bedroom.rugMoved'], so no store changes are needed per room.
  */
 import { useMemo, useRef, type ComponentType } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, Group, MathUtils, Mesh, MeshStandardMaterial } from 'three';
+import { Color, Group, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import { useGameStore } from '../store/gameStore';
+import { playSound } from '../engine/feedback';
 import { useFlagTween } from '../engine/useFlagTween';
 import RoomObjects from '../components/RoomObjects';
 import RoomShell from '../components/RoomShell';
@@ -38,6 +39,36 @@ const FLAGS = {
   rugMoved: 'bedroom.rugMoved',
   suitcaseOpen: 'bedroom.suitcaseOpen',
 };
+
+/** Items needed before the bedroom door will open. */
+const DOOR_REQUIRES = ['bedroom_key', 'wall_symbol_clue'];
+
+/** Guards against a double-click firing the level transition twice. */
+let doorOpening = false;
+
+/** Staged door logic: locked → key-but-not-done hint → unlock + transition. */
+function openBedroomDoor() {
+  const s = useGameStore.getState();
+  if (doorOpening) return;
+  if (!s.inventory.includes('bedroom_key')) {
+    playSound('deny');
+    s.showToast('Locked tight. The keyhole is old, polished brass.');
+    return;
+  }
+  if (!DOOR_REQUIRES.every((id) => s.inventory.includes(id))) {
+    playSound('deny');
+    s.showToast("The key fits — but this room hasn't given up everything yet. Vera kept notes only she could find.");
+    return;
+  }
+  doorOpening = true;
+  playSound('success');
+  s.showToast('The brass key turns. The office waits beyond.');
+  // Small pause so the sound + toast land before the scene swaps.
+  window.setTimeout(() => {
+    useGameStore.getState().setLevel('office');
+    doorOpening = false;
+  }, 900);
+}
 
 /* ------------------------------------------------------------------ */
 /* Object/hotspot config                                                */
@@ -133,11 +164,108 @@ const OBJECTS: RoomObjectConfig[] = [
     visible: (s) => !!s.flags[FLAGS.rugMoved] && !s.inventory.includes('bedroom_key'),
     interaction: { type: 'collect', item: 'bedroom_key' },
   },
+  {
+    id: 'door',
+    name: 'bedroom door',
+    position: [-4.96, 0, -2.4],
+    rotation: [0, Math.PI / 2, 0],
+    interactable: true,
+    // Staged lock/hint/unlock logic lives in openBedroomDoor above.
+    interaction: { type: 'custom', run: () => openBedroomDoor() },
+  },
+
+  /* --- Decorations (examine-only flavor, no puzzle state) --- */
+  {
+    id: 'window',
+    name: 'window',
+    position: [-0.2, 0, -4.94],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Window',
+      text: 'Painted shut, three floors up. Whoever came that night walked in through the front door.',
+    },
+  },
+  {
+    id: 'nightstand',
+    name: 'nightstand',
+    position: [3.9, 0, -4.35],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Nightstand',
+      text: 'An alarm clock with long-dead batteries and a paperback she never finished — the corner of page 212 still folded down.',
+    },
+  },
+  {
+    id: 'bookshelf',
+    name: 'bookshelf',
+    position: [1.2, 0, 4.68],
+    rotation: [0, Math.PI, 0],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Bookshelf',
+      text: 'Journalism, city histories, two shelves of crime novels. The dust line says one book is missing — a thick one.',
+    },
+  },
+  {
+    id: 'wardrobe',
+    name: 'wardrobe',
+    position: [4.62, 0, 2.9],
+    rotation: [0, -Math.PI / 2, 0],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Wardrobe',
+      text: 'Half the hangers are empty. She packed for somewhere cold — and never made the train.',
+    },
+  },
+  {
+    id: 'photo-frames',
+    name: 'photographs',
+    position: [4.94, 0, -1.9],
+    rotation: [0, -Math.PI / 2, 0],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Photographs',
+      text: 'Vera and her brother at the shore. A press badge photo. A newsroom party — Marcus Hale’s arm around her shoulder.',
+    },
+  },
+  {
+    id: 'dead-plant',
+    name: 'potted plant',
+    position: [-4.3, 0, 4.3],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Potted Plant',
+      text: 'Five years without water. Nobody has lived here since.',
+    },
+  },
 ];
 
 /* ------------------------------------------------------------------ */
 /* Models (local origin — placed via the OBJECTS config)               */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Soft pulsing gold ring under collectible proof pieces so they read
+ * as evidence, not set dressing. Raycast-disabled — purely visual.
+ */
+function EvidenceShimmer({ radius = 0.26, y = 0.012 }: { radius?: number; y?: number }) {
+  const mat = useRef<MeshBasicMaterial>(null);
+  useFrame(({ clock }) => {
+    if (mat.current) mat.current.opacity = 0.28 + Math.sin(clock.elapsedTime * 2.6) * 0.16;
+  });
+  return (
+    <mesh position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
+      <ringGeometry args={[radius * 0.65, radius, 28]} />
+      <meshBasicMaterial ref={mat} color="#e2c069" transparent opacity={0.3} depthWrite={false} />
+    </mesh>
+  );
+}
 
 function Bed() {
   return (
@@ -242,12 +370,57 @@ function Suitcase() {
           <meshStandardMaterial color="#5d4033" />
         </mesh>
       </group>
-      {/* ticket stub visible once opened */}
+      {/* interior + contents, visible once opened */}
       {open && (
-        <mesh position={[0, 0.45, 0.05]} rotation={[-Math.PI / 2, 0, 0.25]}>
-          <planeGeometry args={[0.5, 0.24]} />
-          <meshStandardMaterial color="#e9e4d2" />
-        </mesh>
+        <>
+          {/* fabric lining */}
+          <mesh position={[0, 0.441, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[1.04, 0.64]} />
+            <meshStandardMaterial color="#7d3b43" roughness={1} />
+          </mesh>
+          {/* folded clothes — she was packed and ready to leave */}
+          <mesh position={[-0.26, 0.475, -0.14]} castShadow>
+            <boxGeometry args={[0.44, 0.06, 0.34]} />
+            <meshStandardMaterial color={COLORS.blanket} roughness={1} />
+          </mesh>
+          <mesh position={[-0.22, 0.53, -0.1]} rotation={[0, 0.15, 0]} castShadow>
+            <boxGeometry args={[0.36, 0.05, 0.28]} />
+            <meshStandardMaterial color={COLORS.wallBeige} roughness={1} />
+          </mesh>
+          <mesh position={[0.28, 0.47, -0.16]} rotation={[0, -0.1, 0]} castShadow>
+            <boxGeometry args={[0.38, 0.05, 0.26]} />
+            <meshStandardMaterial color="#5a3b52" roughness={1} />
+          </mesh>
+          {/* the ticket, tucked against the clothes */}
+          <group position={[0.05, 0.452, 0.12]} rotation={[-Math.PI / 2, 0, 0.25]}>
+            {/* stock */}
+            <mesh>
+              <planeGeometry args={[0.5, 0.24]} />
+              <meshStandardMaterial color="#efe7cf" />
+            </mesh>
+            {/* header band */}
+            <mesh position={[0, 0.085, 0.001]}>
+              <planeGeometry args={[0.5, 0.06]} />
+              <meshStandardMaterial color={COLORS.rug} />
+            </mesh>
+            {/* print lines */}
+            {[0.025, -0.02, -0.065].map((y) => (
+              <mesh key={y} position={[-0.06, y, 0.001]}>
+                <planeGeometry args={[0.3, 0.014]} />
+                <meshStandardMaterial color="#5a5347" />
+              </mesh>
+            ))}
+            {/* perforated stub divider + seat block */}
+            <mesh position={[0.15, -0.02, 0.001]}>
+              <planeGeometry args={[0.006, 0.16]} />
+              <meshStandardMaterial color="#b8a98c" />
+            </mesh>
+            <mesh position={[0.2, -0.02, 0.001]}>
+              <planeGeometry args={[0.055, 0.055]} />
+              <meshStandardMaterial color="#2c4a6e" />
+            </mesh>
+          </group>
+        </>
       )}
     </group>
   );
@@ -256,26 +429,34 @@ function Suitcase() {
 /** Small brass key revealed under the rug. */
 function BedroomKey() {
   return (
-    <group position={[0, 0.05, 0]} rotation={[0, 0.6, 0]}>
-      {/* shaft */}
-      <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.035, 0.035, 0.45, 10]} />
-        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
-      </mesh>
-      {/* bow (head ring) */}
-      <mesh position={[-0.28, 0, 0]} castShadow>
-        <torusGeometry args={[0.09, 0.035, 8, 16]} />
-        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
-      </mesh>
-      {/* teeth */}
-      <mesh position={[0.16, -0.07, 0]} castShadow>
-        <boxGeometry args={[0.05, 0.1, 0.05]} />
-        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
-      </mesh>
-      <mesh position={[0.24, -0.06, 0]} castShadow>
-        <boxGeometry args={[0.05, 0.08, 0.05]} />
-        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
-      </mesh>
+    <group>
+      <group position={[0, 0.05, 0]} rotation={[0, 0.6, 0]}>
+        {/* shaft */}
+        <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.035, 0.035, 0.45, 10]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+        </mesh>
+        {/* bow (head ring) */}
+        <mesh position={[-0.28, 0, 0]} castShadow>
+          <torusGeometry args={[0.09, 0.035, 8, 16]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+        </mesh>
+        {/* teeth */}
+        <mesh position={[0.16, -0.07, 0]} castShadow>
+          <boxGeometry args={[0.05, 0.1, 0.05]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+        </mesh>
+        <mesh position={[0.24, -0.06, 0]} castShadow>
+          <boxGeometry args={[0.05, 0.08, 0.05]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+        </mesh>
+        {/* worn leather tag tied through the bow */}
+        <mesh position={[-0.44, -0.03, 0.03]} rotation={[-Math.PI / 2, 0, 0.35]} castShadow>
+          <boxGeometry args={[0.17, 0.012, 0.11]} />
+          <meshStandardMaterial color="#6b4a3a" roughness={0.9} />
+        </mesh>
+      </group>
+      <EvidenceShimmer radius={0.32} />
     </group>
   );
 }
@@ -386,12 +567,358 @@ function WallClue() {
   );
 }
 
-function HiddenBox() {
+/**
+ * The bedroom door — the level exit, flush against the left (beige) wall.
+ * Local space faces +z; the OBJECTS rotation turns it to face the room.
+ */
+function Door() {
+  const doorWood = '#5d4033';
+  const frameWood = '#4a3226';
+  const brass = { color: '#c9a227', metalness: 0.4, roughness: 0.5 } as const;
   return (
-    <mesh position={[0, 0.09, 0]} castShadow>
-      <boxGeometry args={[0.18, 0.18, 0.24]} />
-      <meshStandardMaterial color={COLORS.note} />
-    </mesh>
+    <group>
+      {/* side posts */}
+      {[-0.62, 0.62].map((x) => (
+        <mesh key={x} position={[x, 1.28, 0.02]} castShadow>
+          <boxGeometry args={[0.14, 2.56, 0.14]} />
+          <meshStandardMaterial color={frameWood} />
+        </mesh>
+      ))}
+      {/* lintel */}
+      <mesh position={[0, 2.53, 0.02]} castShadow>
+        <boxGeometry args={[1.38, 0.14, 0.14]} />
+        <meshStandardMaterial color={frameWood} />
+      </mesh>
+      {/* panel */}
+      <mesh position={[0, 1.23, 0.03]} castShadow receiveShadow>
+        <boxGeometry args={[1.1, 2.46, 0.07]} />
+        <meshStandardMaterial color={doorWood} />
+      </mesh>
+      {/* inset panels (moulding detail) */}
+      {[1.75, 0.72].map((y) => (
+        <mesh key={y} position={[0, y, 0.07]}>
+          <boxGeometry args={[0.8, 0.85, 0.02]} />
+          <meshStandardMaterial color="#54392d" />
+        </mesh>
+      ))}
+      {/* knob */}
+      <mesh position={[0.42, 1.2, 0.1]} castShadow>
+        <sphereGeometry args={[0.06, 12, 12]} />
+        <meshStandardMaterial {...brass} />
+      </mesh>
+      {/* keyhole plate */}
+      <mesh position={[0.42, 1.04, 0.075]}>
+        <boxGeometry args={[0.07, 0.14, 0.02]} />
+        <meshStandardMaterial {...brass} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Blue Room bar matchbox, tray slid half-open, kicked behind the desk. */
+function Matchbox() {
+  return (
+    <group>
+      <group position={[0, 0.045, 0]} rotation={[0, 0.5, 0]}>
+        {/* sleeve */}
+        <mesh castShadow>
+          <boxGeometry args={[0.26, 0.09, 0.18]} />
+          <meshStandardMaterial color="#2c4a6e" />
+        </mesh>
+        {/* printed label on top */}
+        <mesh position={[0, 0.046, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.2, 0.13]} />
+          <meshStandardMaterial color={COLORS.note} />
+        </mesh>
+        {/* striker strip */}
+        <mesh position={[0, 0, 0.091]}>
+          <planeGeometry args={[0.22, 0.05]} />
+          <meshStandardMaterial color="#3a3a3f" roughness={1} />
+        </mesh>
+        {/* inner tray, slid open */}
+        <mesh position={[0.17, -0.005, 0]} castShadow>
+          <boxGeometry args={[0.12, 0.06, 0.16]} />
+          <meshStandardMaterial color={COLORS.wallBeige} />
+        </mesh>
+        {/* match heads peeking out */}
+        {[-0.04, 0, 0.04].map((z) => (
+          <mesh key={z} position={[0.19, 0.035, z]}>
+            <sphereGeometry args={[0.014, 8, 8]} />
+            <meshStandardMaterial color="#a3322b" />
+          </mesh>
+        ))}
+      </group>
+      <EvidenceShimmer radius={0.24} />
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Decorations (examine-only, no puzzle state)                          */
+/* ------------------------------------------------------------------ */
+
+/** Curtained window on the back wall; the pane follows the time-of-day sky. */
+function Window() {
+  const timeOfDay = useGameStore((s) => s.timeOfDay);
+  const sky = useMemo(
+    () => new Color('#101a3a').lerp(new Color('#bcd4e8'), timeOfDay),
+    [timeOfDay],
+  );
+  const frameWood = '#4a3226';
+  return (
+    <group position={[0, 2.1, 0]}>
+      {/* sky pane */}
+      <mesh position={[0, 0, 0.02]}>
+        <planeGeometry args={[1.3, 1.5]} />
+        <meshStandardMaterial color={sky} emissive={sky} emissiveIntensity={0.35} />
+      </mesh>
+      {/* frame */}
+      {[-0.68, 0.68].map((x) => (
+        <mesh key={x} position={[x, 0, 0.05]} castShadow>
+          <boxGeometry args={[0.1, 1.66, 0.08]} />
+          <meshStandardMaterial color={frameWood} />
+        </mesh>
+      ))}
+      {[-0.79, 0.79].map((y) => (
+        <mesh key={y} position={[0, y, 0.05]} castShadow>
+          <boxGeometry args={[1.46, 0.1, 0.08]} />
+          <meshStandardMaterial color={frameWood} />
+        </mesh>
+      ))}
+      {/* muntins */}
+      <mesh position={[0, 0, 0.04]}>
+        <boxGeometry args={[0.05, 1.5, 0.05]} />
+        <meshStandardMaterial color={frameWood} />
+      </mesh>
+      <mesh position={[0, 0, 0.04]}>
+        <boxGeometry args={[1.3, 0.05, 0.05]} />
+        <meshStandardMaterial color={frameWood} />
+      </mesh>
+      {/* sill */}
+      <mesh position={[0, -0.9, 0.09]} castShadow>
+        <boxGeometry args={[1.6, 0.08, 0.2]} />
+        <meshStandardMaterial color={frameWood} />
+      </mesh>
+      {/* curtain rod + drawn-back curtains */}
+      <mesh position={[0, 1.06, 0.14]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.03, 0.03, 2.5, 8]} />
+        <meshStandardMaterial color={COLORS.lampCord} />
+      </mesh>
+      {[-0.98, 0.98].map((x) => (
+        <mesh key={x} position={[x, 0.02, 0.12]} castShadow>
+          <boxGeometry args={[0.34, 2.04, 0.1]} />
+          <meshStandardMaterial color="#5a3b52" roughness={1} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Nightstand by the bed — dead alarm clock and an unfinished paperback. */
+function Nightstand() {
+  return (
+    <group>
+      {/* top */}
+      <mesh position={[0, 0.62, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.6, 0.06, 0.5]} />
+        <meshStandardMaterial color={COLORS.bedFrame} />
+      </mesh>
+      {/* drawer body */}
+      <mesh position={[0, 0.38, 0]} castShadow>
+        <boxGeometry args={[0.54, 0.42, 0.44]} />
+        <meshStandardMaterial color={COLORS.desk} />
+      </mesh>
+      {/* drawer knob */}
+      <mesh position={[0, 0.45, 0.23]}>
+        <sphereGeometry args={[0.03, 8, 8]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+      </mesh>
+      {/* legs */}
+      {[-1, 1].map((sx) =>
+        [-1, 1].map((sz) => (
+          <mesh key={`${sx}${sz}`} position={[sx * 0.24, 0.09, sz * 0.19]} castShadow>
+            <boxGeometry args={[0.06, 0.18, 0.06]} />
+            <meshStandardMaterial color={COLORS.bedFrame} />
+          </mesh>
+        )),
+      )}
+      {/* alarm clock, stopped years ago */}
+      <group position={[-0.12, 0.72, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.16, 0.14, 0.08]} />
+          <meshStandardMaterial color={COLORS.lampCord} />
+        </mesh>
+        <mesh position={[0, 0, 0.041]}>
+          <planeGeometry args={[0.11, 0.09]} />
+          <meshStandardMaterial color="#d8e2d0" emissive="#aab89a" emissiveIntensity={0.2} />
+        </mesh>
+      </group>
+      {/* unfinished paperback */}
+      <mesh position={[0.15, 0.675, 0.05]} rotation={[0, -0.4, 0]} castShadow>
+        <boxGeometry args={[0.22, 0.05, 0.3]} />
+        <meshStandardMaterial color={COLORS.rug} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Bookshelf against the front wall, three rows of spines + a stack. */
+function Bookshelf() {
+  const frame = '#5d4033';
+  const spines = ['#8a4f57', '#4e7d7a', '#c9a227', '#5a3b52', '#3e5c7a', '#7a5230'];
+  return (
+    <group>
+      {/* sides */}
+      {[-0.7, 0.7].map((x) => (
+        <mesh key={x} position={[x, 1.1, 0]} castShadow>
+          <boxGeometry args={[0.08, 2.2, 0.36]} />
+          <meshStandardMaterial color={frame} />
+        </mesh>
+      ))}
+      {/* back panel */}
+      <mesh position={[0, 1.1, -0.16]}>
+        <boxGeometry args={[1.4, 2.2, 0.04]} />
+        <meshStandardMaterial color="#4a3226" />
+      </mesh>
+      {/* shelves */}
+      {[0.08, 0.62, 1.16, 1.7, 2.17].map((y) => (
+        <mesh key={y} position={[0, y, 0]} castShadow>
+          <boxGeometry args={[1.4, 0.06, 0.36]} />
+          <meshStandardMaterial color={frame} />
+        </mesh>
+      ))}
+      {/* rows of spines — one slot left empty on the middle shelf */}
+      {[0.65, 1.19, 1.73].map((shelfY, row) =>
+        Array.from({ length: 9 }, (_, i) => {
+          if (row === 1 && i === 6) return null; // the missing book
+          const h = 0.34 + ((i * 7 + row * 3) % 4) * 0.03;
+          return (
+            <mesh
+              key={`${row}-${i}`}
+              position={[-0.56 + i * 0.14, shelfY + h / 2, 0.02]}
+              castShadow
+            >
+              <boxGeometry args={[0.11, h, 0.26]} />
+              <meshStandardMaterial color={spines[(i + row * 2) % spines.length]} />
+            </mesh>
+          );
+        }),
+      )}
+      {/* flat stack on the bottom shelf */}
+      {[0, 1, 2].map((i) => (
+        <mesh
+          key={i}
+          position={[-0.3 + i * 0.02, 0.14 + i * 0.055, 0]}
+          rotation={[0, i * 0.16 - 0.1, 0]}
+          castShadow
+        >
+          <boxGeometry args={[0.32, 0.05, 0.24]} />
+          <meshStandardMaterial color={spines[(i * 2 + 1) % spines.length]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Tall two-door wardrobe against the right wall. */
+function Wardrobe() {
+  return (
+    <group>
+      <mesh position={[0, 1.1, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.5, 2.2, 0.6]} />
+        <meshStandardMaterial color="#5d4033" />
+      </mesh>
+      {/* crown */}
+      <mesh position={[0, 2.24, 0]} castShadow>
+        <boxGeometry args={[1.6, 0.08, 0.7]} />
+        <meshStandardMaterial color="#4a3226" />
+      </mesh>
+      {/* door seam */}
+      <mesh position={[0, 1.1, 0.301]}>
+        <planeGeometry args={[0.02, 2.1]} />
+        <meshStandardMaterial color="#3a291e" />
+      </mesh>
+      {/* inset door panels */}
+      {[-0.37, 0.37].map((x) => (
+        <mesh key={x} position={[x, 1.15, 0.302]}>
+          <planeGeometry args={[0.55, 1.7]} />
+          <meshStandardMaterial color="#54392d" />
+        </mesh>
+      ))}
+      {/* handles */}
+      {[-0.09, 0.09].map((x) => (
+        <mesh key={x} position={[x, 1.1, 0.32]}>
+          <sphereGeometry args={[0.035, 8, 8]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Cluster of framed photographs on the right wall. */
+function PhotoFrames() {
+  const frames: { pos: [number, number, number]; size: [number, number]; photo: string }[] = [
+    { pos: [-0.55, 2.3, 0], size: [0.5, 0.62], photo: '#8a97a8' },
+    { pos: [0.35, 2.18, 0], size: [0.66, 0.46], photo: '#a89a7d' },
+    { pos: [-0.1, 1.6, 0], size: [0.4, 0.4], photo: '#7d8a78' },
+  ];
+  return (
+    <group>
+      {frames.map((f, i) => (
+        <group key={i} position={f.pos}>
+          <mesh castShadow>
+            <boxGeometry args={[f.size[0] + 0.08, f.size[1] + 0.08, 0.04]} />
+            <meshStandardMaterial color={COLORS.lampCord} />
+          </mesh>
+          <mesh position={[0, 0, 0.021]}>
+            <planeGeometry args={f.size} />
+            <meshStandardMaterial color={f.photo} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** A houseplant, five years dead. */
+function DeadPlant() {
+  return (
+    <group>
+      {/* pot */}
+      <mesh position={[0, 0.22, 0]} castShadow>
+        <cylinderGeometry args={[0.24, 0.18, 0.44, 12]} />
+        <meshStandardMaterial color="#9c5a3c" roughness={1} />
+      </mesh>
+      {/* dry soil */}
+      <mesh position={[0, 0.43, 0]}>
+        <cylinderGeometry args={[0.21, 0.21, 0.03, 12]} />
+        <meshStandardMaterial color="#3e3228" roughness={1} />
+      </mesh>
+      {/* withered stems, slumped outward */}
+      {[
+        [0.35, 0.1],
+        [-0.3, -0.15],
+        [0.08, 0.4],
+        [-0.12, -0.35],
+      ].map(([lx, lz], i) => (
+        <mesh key={i} position={[lx * 0.2, 0.72, lz * 0.2]} rotation={[lz, 0, lx]} castShadow>
+          <cylinderGeometry args={[0.012, 0.028, 0.65, 6]} />
+          <meshStandardMaterial color="#6e5c3a" roughness={1} />
+        </mesh>
+      ))}
+      {/* dropped leaves */}
+      {[
+        [0.32, 0.16],
+        [-0.28, 0.3],
+        [0.1, 0.44],
+      ].map(([x, z], i) => (
+        <mesh key={i} position={[x, 0.005, z]} rotation={[-Math.PI / 2, 0, i * 1.4]}>
+          <circleGeometry args={[0.06, 6]} />
+          <meshStandardMaterial color="#7a6844" roughness={1} />
+        </mesh>
+      ))}
+    </group>
   );
 }
 
@@ -401,9 +928,16 @@ const MODELS: Record<string, ComponentType> = {
   rug: Rug,
   lamp: CeilingLamp,
   suitcase: Suitcase,
-  'hidden-box': HiddenBox,
+  'hidden-box': Matchbox,
   'bedroom-key': BedroomKey,
   'wall-symbol': WallClue,
+  door: Door,
+  window: Window,
+  nightstand: Nightstand,
+  bookshelf: Bookshelf,
+  wardrobe: Wardrobe,
+  'photo-frames': PhotoFrames,
+  'dead-plant': DeadPlant,
 };
 
 /* ------------------------------------------------------------------ */
@@ -473,12 +1007,11 @@ const bedroom: LevelConfig = {
   name: 'The Bedroom',
   Scene: BedroomScene,
   lightingPanel: true,
-  unlock: {
-    requiredItems: ['bedroom_key', 'wall_symbol_clue'],
-    nextLevel: 'office',
-    title: '🗝️ Door Unlocked',
-    text: 'The brass key fits the bedroom door. There is nothing more to find here.',
-    buttonLabel: 'Go to the Office →',
+  objective: {
+    text: 'Search the bedroom. Vera left more here than the report ever mentioned.',
+    clueItems: ['bedroom_key', 'matchbox', 'train_ticket', 'wall_symbol_clue'],
+    completeWhenItems: DOOR_REQUIRES,
+    completeText: 'The brass key fits the bedroom door. Unlock it when you’re ready to move on.',
   },
 };
 

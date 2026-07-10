@@ -19,15 +19,15 @@ export type RoomObjectConfig = {
   visible?: (state: GameState) => boolean;
 };
 
-/** How a level is completed and where it leads. */
-export type UnlockConfig = {
-  /** Item ids that must all be in the inventory. */
-  requiredItems: string[];
-  /** Level id to advance to. */
-  nextLevel: string;
-  title: string;
+/** Data for the objective HUD ("Evidence: X / N" + current goal line). */
+export type ObjectiveConfig = {
+  /** Goal line shown while the level's exit is still locked. */
   text: string;
-  buttonLabel: string;
+  /** Collectible evidence ids counted in the "Evidence X / N" line. */
+  clueItems: string[];
+  /** Once all of these items are held, `completeText` replaces `text`. */
+  completeWhenItems: string[];
+  completeText: string;
 };
 
 /** A room/level definition. Add new rooms by creating one of these. */
@@ -36,8 +36,8 @@ export type LevelConfig = {
   name: string;
   /** The R3F component rendering the room's contents. */
   Scene: ComponentType;
-  /** Exit condition + destination. Omit for levels with no exit yet. */
-  unlock?: UnlockConfig;
+  /** Objective HUD data. Omit for levels without one (placeholders). */
+  objective?: ObjectiveConfig;
   /** Whether the lamp/time-of-day lighting panel applies to this level. */
   lightingPanel?: boolean;
   /** Centered DOM overlay label (used by placeholder levels). */

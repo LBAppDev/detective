@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { ModalSpec } from '../engine/puzzles';
 
 /** Flags can hold booleans, numbers, or strings (dial positions, codes...). */
@@ -13,7 +14,12 @@ export type LampColor = 'warm' | 'uv';
 /** Level ids are open strings — levels are defined in src/levels/. */
 export type LevelId = string;
 
+/** 'title' = case-briefing screen; 'playing' = in the 3D scene. */
+export type GamePhase = 'title' | 'playing';
+
 export type GameState = {
+  /** Current app phase. Always boots to 'title' (never persisted). */
+  phase: GamePhase;
   /** Collected item ids. */
   inventory: string[];
   /** Generic per-room puzzle flags, namespaced by level (e.g. 'bedroom.rugMoved'). */
@@ -33,6 +39,10 @@ export type GameState = {
   /** Whether the lighting control panel is open (toggled by clicking a lamp). */
   lightPanelOpen: boolean;
 
+  /** Leave the title screen and enter the scene. */
+  startGame: () => void;
+  /** Wipe all case progress and return to the title/briefing screen. */
+  resetGame: () => void;
   toggleLightPanel: () => void;
   setFlag: (key: string, value?: FlagValue) => void;
   getFlag: (key: string) => boolean;
@@ -48,16 +58,28 @@ export type GameState = {
   setLevel: (level: LevelId) => void;
 };
 
-export const useGameStore = create<GameState>((set, get) => ({
-  inventory: [],
-  flags: {},
-  sequences: {},
+/** Fresh-investigation values, shared by the initial state and resetGame. */
+const INITIAL_PROGRESS = {
+  inventory: [] as string[],
+  flags: {} as Record<string, FlagValue>,
+  sequences: {} as Record<string, number>,
   activeModal: null,
   toast: null,
-  lampColor: 'warm',
+  lampColor: 'warm' as LampColor,
   timeOfDay: 1,
-  currentLevel: 'bedroom',
+  currentLevel: 'bedroom' as LevelId,
   lightPanelOpen: false,
+};
+
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
+  ...INITIAL_PROGRESS,
+  phase: 'title',
+
+  startGame: () => set({ phase: 'playing' }),
+
+  resetGame: () => set({ ...INITIAL_PROGRESS, phase: 'title' }),
 
   toggleLightPanel: () => set((s) => ({ lightPanelOpen: !s.lightPanelOpen })),
 
@@ -93,4 +115,19 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setSequenceProgress: (puzzleId, value) =>
     set((s) => ({ sequences: { ...s.sequences, [puzzleId]: value } })),
-}));
+    }),
+    {
+      name: 'cold-case-save',
+      // Persist only case progress — transient UI state (modals, toasts,
+      // panels) and the phase always reset on load.
+      partialize: (s) => ({
+        inventory: s.inventory,
+        flags: s.flags,
+        sequences: s.sequences,
+        currentLevel: s.currentLevel,
+        lampColor: s.lampColor,
+        timeOfDay: s.timeOfDay,
+      }),
+    },
+  ),
+);

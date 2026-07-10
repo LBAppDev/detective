@@ -17,6 +17,8 @@ export const CASE_INFO = {
   victim: 'Vera Caldwell, 34 — investigative journalist, The Ledger',
   verdict:
     'Found at the foot of her home-office stairs on the morning of October 15th, five years ago. Ruled an accidental fall. Her brother never accepted it. The house has been kept untouched ever since.',
+  briefing:
+    'You’re reopening the file at the family’s request. Start where the original report never looked twice: her bedroom, sealed since the morning she was found. Everything is exactly where she left it — and Vera was a journalist. She kept notes only she could find.',
 };
 
 /* ------------------------------------------------------------------ */

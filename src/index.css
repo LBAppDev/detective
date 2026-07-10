@@ -339,52 +339,136 @@ canvas {
   font-size: 14px;
 }
 
-/* ---------- Door unlocked prompt ---------- */
+/* ---------- Title / case briefing screen ---------- */
 
-.door-prompt {
+.title-screen {
   position: fixed;
-  left: 50%;
-  bottom: 90px;
-  transform: translateX(-50%);
-  z-index: 15;
-  width: 300px;
-  text-align: center;
-  background: rgba(20, 18, 26, 0.92);
-  border: 1px solid rgba(201, 162, 39, 0.5);
-  border-radius: 10px;
-  padding: 14px 18px 16px;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #26222e 0%, #14121a 75%);
+}
+
+.title-card {
+  width: min(460px, calc(100vw - 48px));
+  background: #f3ead6;
+  color: #2a241d;
+  border: 1px solid #b8a98c;
+  border-radius: 4px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+  font-family: Georgia, 'Times New Roman', serif;
+  padding: 26px 30px 28px;
+  animation: panel-in 0.35s ease-out;
+}
+
+.title-case-number {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #8a4f57;
+}
+
+.title-name {
+  margin: 6px 0 12px;
+  font-size: 30px;
+  letter-spacing: 2px;
+  border-bottom: 2px solid #2a241d;
+  padding-bottom: 10px;
+}
+
+.title-victim {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.title-verdict {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4a4033;
+}
+
+.title-briefing {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  font-style: italic;
+  color: #6e5f49;
+  border-top: 1px dashed #b8a98c;
+  padding-top: 12px;
+}
+
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* ---------- Objective HUD ---------- */
+
+.objective-hud {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  max-width: 280px;
+  background: rgba(20, 18, 26, 0.85);
+  border: 1px solid rgba(240, 233, 216, 0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
   color: #f0e9d8;
   font-family: Georgia, 'Times New Roman', serif;
-  animation: toast-in 0.3s ease-out;
+  pointer-events: none;
 }
 
-.door-prompt-title {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #e2c069;
-}
-
-.door-prompt-text {
-  margin: 6px 0 12px;
-  font-size: 13px;
+.objective-text {
+  font-size: 12px;
+  font-style: italic;
   line-height: 1.5;
   color: #cfc5b2;
 }
 
-.door-prompt-btn {
-  background: #b98a3d;
-  border: none;
-  border-radius: 6px;
-  color: #1c1a22;
-  font: 700 14px Georgia, serif;
-  padding: 8px 18px;
-  cursor: pointer;
-  transition: background 0.15s ease;
+.objective-count {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #e2c069;
 }
 
-.door-prompt-btn:hover {
-  background: #d4a44e;
+/* ---------- Restart button ---------- */
+
+.restart-btn {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 20;
+  background: rgba(20, 18, 26, 0.85);
+  color: #cfc5b2;
+  border: 1px solid rgba(240, 233, 216, 0.3);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: 600 13px/1 Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.restart-btn:hover {
+  background: rgba(45, 40, 58, 0.95);
+  color: #f0e9d8;
+}
+
+.restart-btn.arming {
+  background: rgba(90, 30, 36, 0.92);
+  border-color: rgba(226, 130, 130, 0.6);
+  color: #ffd9d0;
 }
 
 /* ---------- Placeholder level label ---------- */
@@ -575,12 +659,16 @@ canvas {
     padding: 10px 12px;
   }
 
-  .door-prompt {
-    width: auto;
-    left: 16px;
-    right: 16px;
-    transform: none;
-    bottom: 120px;
+  .objective-hud {
+    max-width: calc(100vw - 120px);
+  }
+
+  .title-card {
+    padding: 20px 22px 22px;
+  }
+
+  .title-actions {
+    flex-wrap: wrap;
   }
 
   .level-label {

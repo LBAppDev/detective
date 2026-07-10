@@ -60,13 +60,13 @@ export default function Interactable({
     e.stopPropagation();
     // Ignore "clicks" that were actually orbit drags/swipes.
     if (e.delta > 5) return;
-    console.log(`clicked: ${name}`);
     onInteract?.();
   };
 
   return (
     <group
       ref={ref}
+      name={name}
       position={position}
       rotation={rotation}
       onPointerOver={(e) => {
