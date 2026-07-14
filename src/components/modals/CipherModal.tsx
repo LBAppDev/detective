@@ -11,9 +11,12 @@ export default function CipherModal({ spec }: { spec: Spec }) {
   const [guess, setGuess] = useState('');
   const [shakes, setShakes] = useState(0);
 
+  // Forgiving comparison: case, leading/trailing space, and internal
+  // whitespace runs ("the  mail") never fail a correct decode.
+  const normalize = (text: string) => text.trim().toLowerCase().replace(/\s+/g, ' ');
+
   const submit = () => {
-    const normalized = guess.trim().toLowerCase();
-    if (normalized === spec.answer.toLowerCase()) {
+    if (normalize(guess) === normalize(spec.answer)) {
       closeModal();
       playSound('success');
       resolveActions(spec.onSuccess);

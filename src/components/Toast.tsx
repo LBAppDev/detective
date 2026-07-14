@@ -8,7 +8,10 @@ export default function Toast() {
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(clearToast, 2500);
+    // Reading time scales with length (some forensic beats run 200+ chars),
+    // clamped so short toasts stay snappy and long ones never overstay.
+    const duration = Math.min(1500 + toast.length * 40, 10000);
+    const timer = setTimeout(clearToast, duration);
     return () => clearTimeout(timer);
   }, [toast, clearToast]);
 

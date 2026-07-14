@@ -823,13 +823,16 @@ canvas {
 }
 
 .suspect-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* Flex instead of grid so an odd suspect count centers its last row. */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   margin-bottom: 12px;
 }
 
 .suspect-card {
+  flex: 0 1 calc(50% - 5px);
   display: flex;
   flex-direction: column;
   align-items: center;

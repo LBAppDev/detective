@@ -1,10 +1,13 @@
 /**
  * Final accusation modal: the suspect roster as evidence-board cards.
- * One shot. The right pick fires spec.onSuccess (solved flag + epilogue).
- * A wrong pick sets the persisted failFlag — the accusation collapses,
- * and the only way forward is restarting the case from the beginning.
- * The failFlag survives closing the modal and page reloads, so the
- * failure can't be dodged.
+ * One shot, with a two-step confirm: picking a card only *selects* the
+ * suspect; the accusation fires from an explicit confirm button, so a
+ * stray click can never burn the run. The right pick fires
+ * spec.onSuccess (solved flag + epilogue). A confirmed wrong pick sets
+ * the persisted failFlag — the accusation collapses, and the only way
+ * forward is restarting the case from the beginning. The failFlag
+ * survives closing the modal and page reloads, so the failure can't
+ * be dodged.
  */
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
@@ -21,6 +24,8 @@ export default function AccuseModal({ spec }: { spec: Spec }) {
     spec.failFlag ? !!s.flags[spec.failFlag] : false,
   );
   const [rebuttal, setRebuttal] = useState<string | null>(null);
+  /** Suspect id awaiting confirmation (null = still browsing the board). */
+  const [pending, setPending] = useState<string | null>(null);
 
   const accuse = (id: string) => {
     if (id === spec.culpritId) {
@@ -52,13 +57,43 @@ export default function AccuseModal({ spec }: { spec: Spec }) {
     );
   }
 
+  // Confirm step: the name has been picked but not yet said out loud.
+  if (pending) {
+    const sus = SUSPECTS.find((s) => s.id === pending);
+    return (
+      <div className="accuse-modal">
+        <h3 className="modal-title">Are You Certain?</h3>
+        <p className="accuse-prompt">
+          You&rsquo;re about to name <strong>{sus?.name ?? pending}</strong> as Vera&rsquo;s killer,
+          out loud, in front of the family. There is no second accusation. Say it, and it
+          can&rsquo;t be unsaid.
+        </p>
+        <div className="modal-row">
+          <button className="modal-btn" onClick={() => accuse(pending)}>
+            Accuse {sus?.name ?? pending}
+          </button>
+          <button className="modal-btn subtle" onClick={() => setPending(null)}>
+            Reconsider
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="accuse-modal">
       <h3 className="modal-title">{spec.title ?? 'Name the Killer'}</h3>
       {spec.prompt && <p className="accuse-prompt">{spec.prompt}</p>}
       <div className="suspect-grid">
         {SUSPECTS.map((sus) => (
-          <button key={sus.id} className="suspect-card" onClick={() => accuse(sus.id)}>
+          <button
+            key={sus.id}
+            className="suspect-card"
+            onClick={() => {
+              playSound('click');
+              setPending(sus.id);
+            }}
+          >
             <span className="suspect-portrait">{sus.portrait}</span>
             <span className="suspect-name">{sus.name}</span>
             <span className="suspect-role">{sus.role}</span>

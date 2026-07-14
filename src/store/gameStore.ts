@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ModalSpec } from '../engine/puzzles';
+import { stopAmbience } from '../engine/feedback';
 
 /** Flags can hold booleans, numbers, or strings (dial positions, codes...). */
 export type FlagValue = boolean | number | string;
@@ -79,7 +80,11 @@ export const useGameStore = create<GameState>()(
 
   startGame: () => set({ phase: 'playing' }),
 
-  resetGame: () => set({ ...INITIAL_PROGRESS, phase: 'title' }),
+  resetGame: () => {
+    // Silence the room tone — the title screen restarts it on begin.
+    stopAmbience();
+    set({ ...INITIAL_PROGRESS, phase: 'title' });
+  },
 
   toggleLightPanel: () => set((s) => ({ lightPanelOpen: !s.lightPanelOpen })),
 

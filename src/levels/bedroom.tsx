@@ -68,7 +68,9 @@ function openBedroomDoor() {
   s.showToast('The brass key turns. The office waits beyond.');
   // Small pause so the sound + toast land before the scene swaps.
   window.setTimeout(() => {
-    useGameStore.getState().setLevel('office');
+    const now = useGameStore.getState();
+    // Guard: don't warp if the player restarted mid-transition.
+    if (now.phase === 'playing' && now.currentLevel === 'bedroom') now.setLevel('office');
     doorOpening = false;
   }, 900);
 }

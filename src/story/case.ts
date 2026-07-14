@@ -73,7 +73,7 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
   story_draft: {
     name: 'Final Draft \u2014 The Halloway Skim',
     description:
-      'Vera\u2019s finished expos\u00e9, printed and locked in a wall safe behind her press photo \u2014 the combination was the date she died. Every claim sourced, every payment traced. A note clipped to the byline page, in her hand: \u0022If you\u2019re reading this without me, the ledger page is the proof. Trust no one at the paper.\u0022 She was ready to publish.',
+      'Vera\u2019s finished expos\u00e9, printed and locked in a wall safe behind her press photo \u2014 the combination was the day she circled in red: \u0022the day it ends.\u0022 Every claim sourced, every payment traced. A note clipped to the byline page, in her hand: \u0022If you\u2019re reading this without me, the ledger page is the proof. Trust no one at the paper.\u0022 She was ready to publish.',
   },
   hale_voicemail: {
     name: 'Voicemail \u2014 Marcus Hale',
@@ -152,20 +152,20 @@ export type Suspect = {
 
 export const SUSPECTS: Suspect[] = [
   {
-    id: 'hale',
-    name: 'Marcus Hale',
-    role: 'Editor, The Ledger \u2014 Vera\u2019s mentor',
-    portrait: '\ud83d\udd76\ufe0f',
-    bio: 'Hired Vera, trained her, championed her \u2014 then killed her Halloway story two weeks before she died, citing \u0022insufficient sourcing.\u0022 Publicly devastated by her death. Gave a eulogy. Still runs the paper.',
-    linkedClues: ['hale_voicemail', 'wine_gift', 'crumpled_note', 'cufflink', 'ledger_page', 'nadia_statement', 'cipher_notebook', 'story_draft', 'blue_room_photo'],
-  },
-  {
     id: 'voss',
     name: 'Edward Voss',
     role: 'City Councilman \u2014 public face of the Halloway Trust',
     portrait: '\ud83c\udfdb\ufe0f',
     bio: 'Loud, litigious, and the first name on Vera\u2019s list. Sent legal threats for months. On the night of the murder he was giving a speech at a televised gala \u2014 four hundred witnesses.',
     linkedClues: ['voss_letters', 'ledger_page'],
+  },
+  {
+    id: 'harrow',
+    name: 'Miles Harrow',
+    role: '\u0022Security consultant,\u0022 Halloway Trust \u2014 Voss\u2019s fixer',
+    portrait: '\ud83d\udd75\ufe0f',
+    bio: 'Ex-detective, paid off the books to make the Trust\u2019s problems quiet. Hand-delivered the final legal threat, so he knew the house \u2014 a neighbor puts his car on her street twice that October. Wears monogrammed silver cufflinks. No alibi for the night of the 14th. His initials: M.H.',
+    linkedClues: ['voss_letters', 'cufflink', 'ledger_page', 'wine_gift', 'crumpled_note', 'nadia_statement'],
   },
   {
     id: 'nadia',
@@ -176,12 +176,12 @@ export const SUSPECTS: Suspect[] = [
     linkedClues: ['matchbox', 'ledger_page', 'nadia_statement'],
   },
   {
-    id: 'harrow',
-    name: 'Miles Harrow',
-    role: '\u0022Security consultant,\u0022 Halloway Trust \u2014 Voss\u2019s fixer',
-    portrait: '\ud83d\udd75\ufe0f',
-    bio: 'Ex-detective, paid off the books to make the Trust\u2019s problems quiet. Hand-delivered the final legal threat, so he knew the house \u2014 a neighbor puts his car on her street twice that October. Wears monogrammed silver cufflinks. No alibi for the night of the 14th. His initials: M.H.',
-    linkedClues: ['voss_letters', 'cufflink', 'ledger_page', 'wine_gift', 'crumpled_note'],
+    id: 'hale',
+    name: 'Marcus Hale',
+    role: 'Editor, The Ledger \u2014 Vera\u2019s mentor',
+    portrait: '\ud83d\udd76\ufe0f',
+    bio: 'Hired Vera, trained her, championed her \u2014 then killed her Halloway story two weeks before she died, citing \u0022insufficient sourcing.\u0022 Publicly devastated by her death. Gave a eulogy. Still runs the paper.',
+    linkedClues: ['hale_voicemail', 'wine_gift', 'crumpled_note', 'cufflink', 'ledger_page', 'blue_room_photo'],
   },
   {
     id: 'ashe',

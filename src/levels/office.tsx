@@ -328,7 +328,7 @@ const OBJECTS: RoomObjectConfig[] = [
       onSuccess: [
         { flag: FLAGS.safeOpen },
         { sound: 'slide' },
-        { toast: 'The lock gives on the date she died. Inside: a printed manuscript, bound with a clip.' },
+        { toast: 'The lock gives on the day she circled in red — the day it ends. Inside: a printed manuscript, bound with a clip.' },
       ],
       onFail: [{ toast: 'The dial resets. Everything important is dated — check what she circled.' }],
     },

@@ -4,6 +4,7 @@
  * this handles visibility predicates and interaction wiring.
  */
 import type { ComponentType } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../store/gameStore';
 import type { RoomObjectConfig } from '../levels/types';
 import { interactObject } from '../engine/puzzles';
@@ -16,13 +17,17 @@ type RoomObjectsProps = {
 };
 
 export default function RoomObjects({ objects, models }: RoomObjectsProps) {
-  // Subscribing to the store re-renders when object visibility changes.
-  const gameState = useGameStore();
+  // Subscribe only to the per-object visibility results (shallow-compared),
+  // so unrelated store churn (time-of-day drags, toasts, modals...) doesn't
+  // re-render every hotspot in the room.
+  const visibility = useGameStore(
+    useShallow((s) => objects.map((obj) => (obj.visible ? obj.visible(s) : true))),
+  );
 
   return (
     <>
-      {objects.map((obj) => {
-        if (obj.visible && !obj.visible(gameState)) return null;
+      {objects.map((obj, index) => {
+        if (!visibility[index]) return null;
         const Model = models[obj.id];
         if (!Model) return null;
         return obj.interactable ? (
