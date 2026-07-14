@@ -60,6 +60,36 @@ export type ModalSpec =
       placeholder?: string;
       onSuccess: Action[];
       onFail?: Action[];
+    }
+  /** Full-page shadow-alignment puzzle (renders its own 3D scene). */
+  | {
+      kind: 'shadow';
+      title?: string;
+      prompt?: string;
+      onSuccess: Action[];
+    }
+  /** Photographic evidence viewer (art registry in components/photos). */
+  | {
+      kind: 'photo';
+      photoId: string;
+      title?: string;
+      caption?: string;
+    }
+  /** Final accusation — pick the killer from the suspect roster. */
+  | {
+      kind: 'accuse';
+      title?: string;
+      prompt?: string;
+      /** Suspect id (see story/case.ts) that closes the case. */
+      culpritId: string;
+      /** Per-suspect rebuttal shown when the player picks wrong. */
+      wrongText?: Record<string, string>;
+      /**
+       * One-shot mode: a wrong pick sets this (persisted) flag and the
+       * case is burned — the only way forward is a full game restart.
+       */
+      failFlag?: string;
+      onSuccess: Action[];
     };
 
 /* ------------------------------------------------------------------ */

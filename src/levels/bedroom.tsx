@@ -38,10 +38,13 @@ const COLORS = {
 const FLAGS = {
   rugMoved: 'bedroom.rugMoved',
   suitcaseOpen: 'bedroom.suitcaseOpen',
+  drawerOpen: 'bedroom.drawerOpen',
+  wardrobeOpen: 'bedroom.wardrobeOpen',
+  curtainsClosed: 'bedroom.curtainsClosed',
 };
 
 /** Items needed before the bedroom door will open. */
-const DOOR_REQUIRES = ['bedroom_key', 'wall_symbol_clue'];
+const DOOR_REQUIRES = ['bedroom_key', 'wall_symbol_clue', 'matchbox', 'train_ticket'];
 
 /** Guards against a double-click firing the level transition twice. */
 let doorOpening = false;
@@ -121,7 +124,8 @@ const OBJECTS: RoomObjectConfig[] = [
     name: 'matchbox',
     position: [-4.75, 0, 1.6],
     interactable: true,
-    // Kicked behind the desk — its notebook entry holds the suitcase code.
+    // Kicked behind the desk — its notebook entry holds the reading order
+    // for the suitcase code (clock · book · shelf), not the digits.
     visible: (s) => !s.inventory.includes('matchbox'),
     interaction: { type: 'collect', item: 'matchbox' },
   },
@@ -135,14 +139,16 @@ const OBJECTS: RoomObjectConfig[] = [
     failText: 'The suitcase is already open — the ticket was all it held.',
     interaction: {
       type: 'code',
-      title: 'Suitcase combination',
+      // The digits are scattered around the room; the matchbox flap only
+      // gives the reading order: clock (4) · book (72) · shelf (9).
+      title: 'Suitcase — four digits',
       answer: '4729',
       onSuccess: [
         { flag: FLAGS.suitcaseOpen },
         { collect: 'train_ticket' },
         { sound: 'success' },
       ],
-      onFail: [{ toast: 'The latch refuses to budge.' }],
+      onFail: [{ toast: 'The latch refuses to budge. Clock · book · shelf — whatever that means.' }],
     },
   },
   {
@@ -174,16 +180,25 @@ const OBJECTS: RoomObjectConfig[] = [
     interaction: { type: 'custom', run: () => openBedroomDoor() },
   },
 
-  /* --- Decorations (examine-only flavor, no puzzle state) --- */
+  /* --- Decorations (openable set dressing + flavor) --- */
   {
     id: 'window',
     name: 'window',
     position: [-0.2, 0, -4.94],
     interactable: true,
+    // Clicking draws / opens the curtains; the sash itself never moves.
     interaction: {
-      type: 'examine',
-      title: 'Window',
-      text: 'Painted shut, three floors up. Whoever came that night walked in through the front door.',
+      type: 'custom',
+      run: (s) => {
+        const closing = !s.flags[FLAGS.curtainsClosed];
+        s.setFlag(FLAGS.curtainsClosed, closing);
+        playSound('slide');
+        s.showToast(
+          closing
+            ? 'You draw the curtains. The room falls a shade darker.'
+            : 'The curtains slide back. The sash is painted shut — three floors up, no one came in this way.',
+        );
+      },
     },
   },
   {
@@ -191,10 +206,39 @@ const OBJECTS: RoomObjectConfig[] = [
     name: 'nightstand',
     position: [3.9, 0, -4.35],
     interactable: true,
+    // Toggles the drawer; the paperback inside carries the middle digits.
+    interaction: {
+      type: 'custom',
+      run: (s) => {
+        const opening = !s.flags[FLAGS.drawerOpen];
+        s.setFlag(FLAGS.drawerOpen, opening);
+        playSound('slide');
+        if (opening) s.showToast('The drawer slides out. Her unfinished paperback lies inside.');
+      },
+    },
+  },
+  {
+    id: 'paperback',
+    name: 'paperback',
+    position: [3.9, 0, -3.98],
+    interactable: true,
+    // Lives inside the drawer — only clickable once it's been opened.
+    visible: (s) => !!s.flags[FLAGS.drawerOpen],
     interaction: {
       type: 'examine',
-      title: 'Nightstand',
-      text: 'An alarm clock with long-dead batteries and a paperback she never finished — the corner of page 212 still folded down.',
+      title: 'Paperback — dog-eared',
+      text: 'A crime novel she never finished. One corner is folded down hard, creased like she meant it to last: page 72.',
+    },
+  },
+  {
+    id: 'alarm-clock',
+    name: 'alarm clock',
+    position: [3.78, 0.72, -4.28],
+    interactable: true,
+    interaction: {
+      type: 'examine',
+      title: 'Alarm Clock',
+      text: 'Stopped dead, the hands frozen at 4 o’clock — the batteries died years ago. The single hour it will always show: 4.',
     },
   },
   {
@@ -206,7 +250,7 @@ const OBJECTS: RoomObjectConfig[] = [
     interaction: {
       type: 'examine',
       title: 'Bookshelf',
-      text: 'Journalism, city histories, two shelves of crime novels. The dust line says one book is missing — a thick one.',
+      text: 'Crime novels, city histories. One thick volume is missing from the middle shelf — and pencilled on the bare board where it stood is a single number: 9.',
     },
   },
   {
@@ -215,10 +259,18 @@ const OBJECTS: RoomObjectConfig[] = [
     position: [4.62, 0, 2.9],
     rotation: [0, -Math.PI / 2, 0],
     interactable: true,
+    // Doors swing open/closed on a flag tween.
     interaction: {
-      type: 'examine',
-      title: 'Wardrobe',
-      text: 'Half the hangers are empty. She packed for somewhere cold — and never made the train.',
+      type: 'custom',
+      run: (s) => {
+        const opening = !s.flags[FLAGS.wardrobeOpen];
+        s.setFlag(FLAGS.wardrobeOpen, opening);
+        playSound('slide');
+        if (opening)
+          s.showToast(
+            'The wardrobe doors swing wide. Half the hangers are bare — she packed for somewhere cold and never made the train.',
+          );
+      },
     },
   },
   {
@@ -430,7 +482,9 @@ function Suitcase() {
 function BedroomKey() {
   return (
     <group>
-      <group position={[0, 0.05, 0]} rotation={[0, 0.6, 0]}>
+      {/* Tipped flat (x = π/2) so the bow ring and teeth lie on the
+          floorboards instead of standing upright / clipping through. */}
+      <group position={[0, 0.05, 0]} rotation={[Math.PI / 2, 0, 0.6]}>
         {/* shaft */}
         <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
           <cylinderGeometry args={[0.035, 0.035, 0.45, 10]} />
@@ -699,23 +753,38 @@ function Window() {
         <boxGeometry args={[1.6, 0.08, 0.2]} />
         <meshStandardMaterial color={frameWood} />
       </mesh>
-      {/* curtain rod + drawn-back curtains */}
+      {/* curtain rod + curtains that slide shut on their flag */}
       <mesh position={[0, 1.06, 0.14]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.03, 0.03, 2.5, 8]} />
         <meshStandardMaterial color={COLORS.lampCord} />
       </mesh>
-      {[-0.98, 0.98].map((x) => (
-        <mesh key={x} position={[x, 0.02, 0.12]} castShadow>
-          <boxGeometry args={[0.34, 2.04, 0.1]} />
-          <meshStandardMaterial color="#5a3b52" roughness={1} />
-        </mesh>
-      ))}
+      <Curtain side={-1} />
+      <Curtain side={1} />
     </group>
   );
 }
 
-/** Nightstand by the bed — dead alarm clock and an unfinished paperback. */
+/** One curtain panel; slides toward the window center when drawn. */
+function Curtain({ side }: { side: -1 | 1 }) {
+  const ref = useFlagTween(FLAGS.curtainsClosed, {
+    position: { from: [side * 0.98, 0.02, 0.12], to: [side * 0.34, 0.02, 0.12] },
+    speed: 4,
+  });
+  return (
+    <group ref={ref} position={[side * 0.98, 0.02, 0.12]}>
+      <mesh castShadow>
+        <boxGeometry args={[0.6, 2.04, 0.1]} />
+        <meshStandardMaterial color="#5a3b52" roughness={1} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Nightstand by the bed. Its drawer slides open on a flag tween. */
 function Nightstand() {
+  const drawerRef = useFlagTween(FLAGS.drawerOpen, {
+    position: { from: [0, 0, 0], to: [0, 0, 0.34] },
+  });
   return (
     <group>
       {/* top */}
@@ -723,16 +792,36 @@ function Nightstand() {
         <boxGeometry args={[0.6, 0.06, 0.5]} />
         <meshStandardMaterial color={COLORS.bedFrame} />
       </mesh>
-      {/* drawer body */}
-      <mesh position={[0, 0.38, 0]} castShadow>
-        <boxGeometry args={[0.54, 0.42, 0.44]} />
+      {/* carcass: sides, back, bottom */}
+      {[-0.26, 0.26].map((x) => (
+        <mesh key={x} position={[x, 0.38, 0]} castShadow>
+          <boxGeometry args={[0.04, 0.42, 0.44]} />
+          <meshStandardMaterial color={COLORS.desk} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.38, -0.2]} castShadow>
+        <boxGeometry args={[0.54, 0.42, 0.04]} />
         <meshStandardMaterial color={COLORS.desk} />
       </mesh>
-      {/* drawer knob */}
-      <mesh position={[0, 0.45, 0.23]}>
-        <sphereGeometry args={[0.03, 8, 8]} />
-        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+      <mesh position={[0, 0.19, 0]} castShadow>
+        <boxGeometry args={[0.54, 0.04, 0.44]} />
+        <meshStandardMaterial color={COLORS.desk} />
       </mesh>
+      {/* drawer: front panel, knob, tray — slides out together */}
+      <group ref={drawerRef}>
+        <mesh position={[0, 0.44, 0.21]} castShadow>
+          <boxGeometry args={[0.5, 0.32, 0.05]} />
+          <meshStandardMaterial color={COLORS.desk} />
+        </mesh>
+        <mesh position={[0, 0.46, 0.245]}>
+          <sphereGeometry args={[0.03, 8, 8]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 0.32, 0]}>
+          <boxGeometry args={[0.46, 0.05, 0.38]} />
+          <meshStandardMaterial color="#8a6a48" />
+        </mesh>
+      </group>
       {/* legs */}
       {[-1, 1].map((sx) =>
         [-1, 1].map((sz) => (
@@ -742,21 +831,56 @@ function Nightstand() {
           </mesh>
         )),
       )}
-      {/* alarm clock, stopped years ago */}
-      <group position={[-0.12, 0.72, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.16, 0.14, 0.08]} />
-          <meshStandardMaterial color={COLORS.lampCord} />
+    </group>
+  );
+}
+
+/** Dead alarm clock on the nightstand — hands frozen at 4:00. */
+function AlarmClock() {
+  return (
+    <group>
+      <mesh castShadow>
+        <boxGeometry args={[0.16, 0.14, 0.08]} />
+        <meshStandardMaterial color={COLORS.lampCord} />
+      </mesh>
+      {/* face */}
+      <mesh position={[0, 0, 0.041]}>
+        <planeGeometry args={[0.11, 0.09]} />
+        <meshStandardMaterial color="#d8e2d0" emissive="#aab89a" emissiveIntensity={0.2} />
+      </mesh>
+      {/* minute hand — straight up (o'clock sharp) */}
+      <mesh position={[0, 0.018, 0.043]}>
+        <planeGeometry args={[0.006, 0.036]} />
+        <meshStandardMaterial color="#2b2b30" />
+      </mesh>
+      {/* hour hand — pointing at 4 */}
+      <mesh position={[0.009, -0.008, 0.043]} rotation={[0, 0, -2.1]}>
+        <planeGeometry args={[0.005, 0.026]} />
+        <meshStandardMaterial color="#2b2b30" />
+      </mesh>
+      {/* twin bells */}
+      {[-0.045, 0.045].map((x) => (
+        <mesh key={x} position={[x, 0.085, 0]}>
+          <sphereGeometry args={[0.025, 8, 8]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
         </mesh>
-        <mesh position={[0, 0, 0.041]}>
-          <planeGeometry args={[0.11, 0.09]} />
-          <meshStandardMaterial color="#d8e2d0" emissive="#aab89a" emissiveIntensity={0.2} />
-        </mesh>
-      </group>
-      {/* unfinished paperback */}
-      <mesh position={[0.15, 0.675, 0.05]} rotation={[0, -0.4, 0]} castShadow>
-        <boxGeometry args={[0.22, 0.05, 0.3]} />
+      ))}
+    </group>
+  );
+}
+
+/** Dog-eared paperback lying in the open nightstand drawer. */
+function Paperback() {
+  return (
+    <group>
+      <mesh position={[0, 0.38, 0]} rotation={[0, -0.25, 0]} castShadow>
+        <boxGeometry args={[0.2, 0.045, 0.28]} />
         <meshStandardMaterial color={COLORS.rug} />
+      </mesh>
+      {/* page block */}
+      <mesh position={[0, 0.38, 0]} rotation={[0, -0.25, 0]}>
+        <boxGeometry args={[0.19, 0.035, 0.27]} />
+        <meshStandardMaterial color={COLORS.note} />
       </mesh>
     </group>
   );
@@ -820,38 +944,88 @@ function Bookshelf() {
   );
 }
 
-/** Tall two-door wardrobe against the right wall. */
+/** One hinged wardrobe door; swings outward on the wardrobe flag. */
+function WardrobeDoor({ side }: { side: -1 | 1 }) {
+  const ref = useFlagTween(FLAGS.wardrobeOpen, {
+    rotation: { from: [0, 0, 0], to: [0, side * 2.2, 0] },
+    speed: 4,
+  });
+  return (
+    <group ref={ref} position={[side * 0.71, 1.1, 0.28]}>
+      <mesh position={[side * -0.355, 0, 0]} castShadow>
+        <boxGeometry args={[0.71, 2.16, 0.05]} />
+        <meshStandardMaterial color="#5d4033" />
+      </mesh>
+      {/* inset panel */}
+      <mesh position={[side * -0.355, 0.05, 0.026]}>
+        <planeGeometry args={[0.5, 1.7]} />
+        <meshStandardMaterial color="#54392d" />
+      </mesh>
+      {/* handle near the seam */}
+      <mesh position={[side * -0.63, 0, 0.045]}>
+        <sphereGeometry args={[0.035, 8, 8]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Tall two-door wardrobe; doors swing open to a half-packed interior. */
 function Wardrobe() {
   return (
     <group>
-      <mesh position={[0, 1.1, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.5, 2.2, 0.6]} />
+      {/* carcass: sides, top, bottom, back */}
+      {[-0.71, 0.71].map((x) => (
+        <mesh key={x} position={[x, 1.1, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.08, 2.2, 0.6]} />
+          <meshStandardMaterial color="#5d4033" />
+        </mesh>
+      ))}
+      <mesh position={[0, 2.16, 0]} castShadow>
+        <boxGeometry args={[1.5, 0.08, 0.6]} />
         <meshStandardMaterial color="#5d4033" />
+      </mesh>
+      <mesh position={[0, 0.06, 0]} castShadow>
+        <boxGeometry args={[1.5, 0.12, 0.6]} />
+        <meshStandardMaterial color="#5d4033" />
+      </mesh>
+      <mesh position={[0, 1.1, -0.27]}>
+        <boxGeometry args={[1.5, 2.2, 0.05]} />
+        <meshStandardMaterial color="#3a291e" />
       </mesh>
       {/* crown */}
       <mesh position={[0, 2.24, 0]} castShadow>
         <boxGeometry args={[1.6, 0.08, 0.7]} />
         <meshStandardMaterial color="#4a3226" />
       </mesh>
-      {/* door seam */}
-      <mesh position={[0, 1.1, 0.301]}>
-        <planeGeometry args={[0.02, 2.1]} />
-        <meshStandardMaterial color="#3a291e" />
+      {/* interior: rail + hangers (most left bare) */}
+      <mesh position={[0, 1.85, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.02, 0.02, 1.3, 8]} />
+        <meshStandardMaterial color={COLORS.lampCord} />
       </mesh>
-      {/* inset door panels */}
-      {[-0.37, 0.37].map((x) => (
-        <mesh key={x} position={[x, 1.15, 0.302]}>
-          <planeGeometry args={[0.55, 1.7]} />
-          <meshStandardMaterial color="#54392d" />
+      {[-0.5, -0.32, -0.14, 0.04, 0.22, 0.44].map((x) => (
+        <mesh key={x} position={[x, 1.76, 0]}>
+          <boxGeometry args={[0.02, 0.16, 0.02]} />
+          <meshStandardMaterial color="#8a6a48" />
         </mesh>
       ))}
-      {/* handles */}
-      {[-0.09, 0.09].map((x) => (
-        <mesh key={x} position={[x, 1.1, 0.32]}>
-          <sphereGeometry args={[0.035, 8, 8]} />
-          <meshStandardMaterial color="#c9a227" metalness={0.4} roughness={0.5} />
-        </mesh>
-      ))}
+      {/* the two garments she left behind */}
+      <mesh position={[-0.32, 1.32, 0]} castShadow>
+        <boxGeometry args={[0.28, 0.85, 0.16]} />
+        <meshStandardMaterial color={COLORS.wallTeal} roughness={1} />
+      </mesh>
+      <mesh position={[0.44, 1.38, 0]} castShadow>
+        <boxGeometry args={[0.24, 0.72, 0.14]} />
+        <meshStandardMaterial color="#5a3b52" roughness={1} />
+      </mesh>
+      {/* folded blankets on the floor of the wardrobe */}
+      <mesh position={[-0.25, 0.19, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.14, 0.4]} />
+        <meshStandardMaterial color={COLORS.pillow} roughness={1} />
+      </mesh>
+      {/* doors */}
+      <WardrobeDoor side={-1} />
+      <WardrobeDoor side={1} />
     </group>
   );
 }
@@ -934,6 +1108,8 @@ const MODELS: Record<string, ComponentType> = {
   door: Door,
   window: Window,
   nightstand: Nightstand,
+  'alarm-clock': AlarmClock,
+  paperback: Paperback,
   bookshelf: Bookshelf,
   wardrobe: Wardrobe,
   'photo-frames': PhotoFrames,

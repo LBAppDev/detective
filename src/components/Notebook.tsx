@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { CASE_INFO, ITEM_DETAILS, SUSPECTS, TIMELINE } from '../story/case';
+import { ITEM_PHOTOS, PHOTO_ART } from './photos';
 
 type Tab = 'clues' | 'suspects' | 'timeline';
 
@@ -13,6 +14,7 @@ export default function Notebook() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('clues');
   const inventory = useGameStore((s) => s.inventory);
+  const openModal = useGameStore((s) => s.openModal);
 
   const has = (id: string) => inventory.includes(id);
 
@@ -66,12 +68,31 @@ export default function Notebook() {
               <ul className="notebook-list">
                 {inventory.map((id) => {
                   const details = ITEM_DETAILS[id];
+                  const photo = ITEM_PHOTOS[id];
+                  const Art = photo ? PHOTO_ART[photo.photoId] : null;
                   return (
                     <li key={id} className="notebook-entry">
                       <span className="notebook-entry-name">{details?.name ?? id}</span>
                       <p className="notebook-entry-desc">
                         {details?.description ?? 'No notes on this item yet.'}
                       </p>
+                      {photo && Art && (
+                        <button
+                          className="notebook-photo"
+                          title="Examine the photograph"
+                          onClick={() =>
+                            openModal({
+                              kind: 'photo',
+                              photoId: photo.photoId,
+                              title: details?.name,
+                              caption: photo.caption,
+                            })
+                          }
+                        >
+                          <Art />
+                          <span>examine</span>
+                        </button>
+                      )}
                     </li>
                   );
                 })}

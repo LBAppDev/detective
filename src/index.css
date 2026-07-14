@@ -677,3 +677,205 @@ canvas {
     text-align: center;
   }
 }
+
+/* ---------- Shadow-alignment puzzle (dedicated full-screen page) ---------- */
+
+.shadow-page {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #100e15;
+  color: #f0e9d8;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.shadow-head {
+  text-align: center;
+  padding: 18px 24px 10px;
+}
+
+.shadow-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  letter-spacing: 3px;
+}
+
+.shadow-prompt {
+  margin: 0;
+  font-size: 14px;
+  font-style: italic;
+  color: rgba(240, 233, 216, 0.65);
+}
+
+.shadow-canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.shadow-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 14px 20px 18px;
+  background: rgba(20, 18, 26, 0.92);
+  border-top: 1px solid rgba(240, 233, 216, 0.15);
+}
+
+.shadow-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: rgba(240, 233, 216, 0.75);
+  transition: color 0.2s ease;
+}
+
+.shadow-control[data-aligned="true"] {
+  color: #e2c069;
+}
+
+.shadow-control input[type="range"] {
+  width: 170px;
+  accent-color: #c9a227;
+}
+
+/* ---------- Photographic evidence viewer ---------- */
+
+.photo-modal {
+  text-align: center;
+}
+
+.photo-frame {
+  display: inline-block;
+  background: #f4efe2;
+  padding: 12px 12px 30px;
+  margin: 10px auto 6px;
+  max-width: 340px;
+  transform: rotate(-1.6deg);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+
+.photo-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.photo-caption {
+  margin: 10px auto 0;
+  max-width: 360px;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* Small print pinned into the notebook entry */
+.notebook-photo {
+  display: block;
+  width: 140px;
+  margin: 8px 0 2px;
+  padding: 5px 5px 2px;
+  background: #fdfaf1;
+  border: 1px solid #b8a98c;
+  transform: rotate(-2deg);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.notebook-photo:hover {
+  transform: rotate(0deg) scale(1.04);
+}
+
+.notebook-photo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.notebook-photo span {
+  display: block;
+  font: italic 11px Georgia, serif;
+  color: #6e5f49;
+  padding: 3px 0 2px;
+}
+
+/* ---------- Final accusation ---------- */
+
+.accuse-modal {
+  max-width: 420px;
+  text-align: center;
+}
+
+.accuse-prompt {
+  margin: 4px 0 14px;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.suspect-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.suspect-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px 10px;
+  background: #fffdf6;
+  border: 1px solid #b8a98c;
+  border-radius: 6px;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #2a241d;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.suspect-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  border-color: #b98a3d;
+}
+
+.suspect-portrait {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.suspect-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.suspect-role {
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.7;
+  line-height: 1.35;
+}
+
+.accuse-rebuttal {
+  margin: 0 auto 10px;
+  max-width: 380px;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.55;
+  color: #7a3028;
+}
+
+.accuse-rebuttal[data-shake='true'] {
+  animation: shake 0.3s ease;
+}

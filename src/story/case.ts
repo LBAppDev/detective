@@ -40,7 +40,7 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
   matchbox: {
     name: 'Matchbox \u2014 The Blue Room',
     description:
-      'A bar matchbox kicked behind the desk. Inside the flap, in pencil: \u00224 \u00b7 7 \u00b7 2 \u00b7 9\u0022 \u2014 Vera\u2019s press ID number. The Blue Room is a quiet bar across town. Not her neighborhood.',
+      'A bar matchbox kicked behind the desk. Inside the flap, in pencil: "clock · book · shelf" — not a code, an order. Vera scattered the suitcase digits around the room and left herself only the sequence to read them back. The Blue Room is a quiet bar across town. Not her neighborhood.',
   },
   train_ticket: {
     name: 'Train Ticket',
@@ -48,21 +48,32 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
       'A one-way ticket for the 11:40 night train, dated October 14th \u2014 the night she died. Locked in a packed suitcase. Vera wasn\u2019t running from the story. She was leaving to finish it somewhere safe.',
   },
 
+  drawer_key: {
+    name: 'Small Brass Key',
+    description:
+      'Taped to the underside of her office chair. It fits the locked writing-desk drawer — Vera hid the key in the room it unlocked, the habit of someone who never expected the danger to come from inside the house.',
+  },
+
   /* --- Office (Chapter 2) --- */
   cipher_notebook: {
     name: 'Cipher Notebook',
     description:
-      'Vera\u2019s working notebook, written entirely in a substitution cipher. Decoded, one line repeats: \u0022The third mark reads the mail.\u0022',
+      'Vera\u2019s working notebook, every page in a hand-rolled cipher. In the margin of the last page: the circle-and-cross mark, three tallies beneath \u2014 her key. Slide each letter back by three and one line repeats: \u0022The third mark reads the mail.\u0022',
   },
   ledger_page: {
     name: 'Torn Ledger Page',
     description:
-      'A page torn from the Halloway Trust\u2019s private ledger \u2014 the page her source passed her at The Blue Room. Recurring payments, going back years, to initials: E.V. \u2026 R.K. \u2026 and M.H.',
+      'A page torn from the Halloway Trust\u2019s private ledger \u2014 the page her source passed her at The Blue Room. Recurring payments, going back years, to initials in this order, every month: E.V. \u2026 R.K. \u2026 and M.H. Stamped in the corner: the circle-and-cross mark from her bedroom wall. Three tallies. Three names on the payroll.',
   },
   voss_letters: {
     name: 'Legal Threats \u2014 Voss',
     description:
-      'Three letters from Councilman Edward Voss\u2019s attorneys, each angrier than the last, demanding Vera drop the Halloway story. Loud. Public. On the record \u2014 which is exactly why they feel like the wrong answer.',
+      'Three letters from Councilman Edward Voss\u2019s attorneys, each angrier than the last, demanding Vera drop the Halloway story. Loud. Public. On the record \u2014 which is exactly why they feel like the wrong answer. Killers don\u2019t write first.',
+  },
+  story_draft: {
+    name: 'Final Draft \u2014 The Halloway Skim',
+    description:
+      'Vera\u2019s finished expos\u00e9, printed and locked in a wall safe behind her press photo \u2014 the combination was the date she died. Every claim sourced, every payment traced. A note clipped to the byline page, in her hand: \u0022If you\u2019re reading this without me, the ledger page is the proof. Trust no one at the paper.\u0022 She was ready to publish.',
   },
   hale_voicemail: {
     name: 'Voicemail \u2014 Marcus Hale',
@@ -86,6 +97,11 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
     description:
       'An expensive bottle, brought that night, not from her rack. The handwritten tag: \u0022To the next chapter \u2014 M.\u0022',
   },
+  blue_room_photo: {
+    name: 'Photograph \u2014 The Blue Room',
+    description:
+      'Hidden behind a loose kitchen tile that only reveals itself when the shelf ornaments\u2019 shadows align with her pencil marks \u2014 Vera\u2019s best hiding place yet. The photo: her source \u0022Iris\u0022 passing the ledger page across a Blue Room table, October 14th. And at the bar behind them, half-turned away but unmistakable in the mirror \u2014 Marcus Hale. He was watching the handoff.',
+  },
   crumpled_note: {
     name: 'Crumpled Note',
     description:
@@ -106,8 +122,18 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
   nadia_statement: {
     name: 'Nadia\u2019s Statement',
     description:
-      '\u0022I was Iris. I set the Blue Room meeting through the paper\u2019s tip line \u2014 it was supposed to be safe. Only one person at The Ledger could read that tip line. Her editor. Marcus Hale.\u0022',
+      '\u0022I was Iris. I set the Blue Room meeting through the paper\u2019s tip line \u2014 it was supposed to be safe. Only one person at The Ledger could read that tip line.\u0022 She hung up before saying the name. She didn\u2019t have to.',
   },
+};
+
+/* ------------------------------------------------------------------ */
+/* Case closed — the epilogue shown after the correct accusation        */
+/* ------------------------------------------------------------------ */
+
+export const EPILOGUE = {
+  title: 'Case Closed \u2014 The Halloway File',
+  text:
+    'Marcus Hale. Her mentor \u2014 and the third set of initials on the Trust\u2019s payroll. He killed her story twice: once at the paper, citing \u0022insufficient sourcing,\u0022 and once in her kitchen, with a bottle marked \u0022to the next chapter.\u0022 The tip line told him his own reporter had the proof; the Blue Room mirror caught him watching the handoff; his voicemail kept her home; his cufflink stayed under the runner where he dragged her. The residue, the photograph, the drag marks, and Nadia\u2019s statement go to the district attorney in the morning. Vera\u2019s expos\u00e9 runs the day after \u2014 every word hers, under her byline, five years late. The 11:40 train still leaves on time. Case #47-1014: closed.',
 };
 
 /* ------------------------------------------------------------------ */
@@ -131,7 +157,7 @@ export const SUSPECTS: Suspect[] = [
     role: 'Editor, The Ledger \u2014 Vera\u2019s mentor',
     portrait: '\ud83d\udd76\ufe0f',
     bio: 'Hired Vera, trained her, championed her \u2014 then killed her Halloway story two weeks before she died, citing \u0022insufficient sourcing.\u0022 Publicly devastated by her death. Gave a eulogy. Still runs the paper.',
-    linkedClues: ['hale_voicemail', 'wine_gift', 'crumpled_note', 'cufflink', 'ledger_page', 'nadia_statement', 'cipher_notebook'],
+    linkedClues: ['hale_voicemail', 'wine_gift', 'crumpled_note', 'cufflink', 'ledger_page', 'nadia_statement', 'cipher_notebook', 'story_draft', 'blue_room_photo'],
   },
   {
     id: 'voss',
@@ -175,8 +201,8 @@ export const TIMELINE: TimelineEntry[] = [
   {
     id: 'story-killed',
     time: 'Two weeks before',
-    text: 'Marcus Hale kills Vera\u2019s Halloway Trust expos\u00e9 at The Ledger \u2014 \u0022insufficient sourcing.\u0022 She keeps working it alone.',
-    revealedBy: ['cipher_notebook', 'voss_letters'],
+    text: 'Marcus Hale kills Vera\u2019s Halloway Trust expos\u00e9 at The Ledger \u2014 \u0022insufficient sourcing.\u0022 She keeps working it alone \u2014 and finishes it.',
+    revealedBy: ['cipher_notebook', 'voss_letters', 'story_draft'],
   },
   {
     id: 'ticket',
@@ -193,8 +219,8 @@ export const TIMELINE: TimelineEntry[] = [
   {
     id: 'blue-room',
     time: '8:00 PM',
-    text: 'Vera meets her source \u0022Iris\u0022 at The Blue Room and receives a torn page from the Trust\u2019s real ledger.',
-    revealedBy: ['matchbox', 'ledger_page'],
+    text: 'Vera meets her source \u0022Iris\u0022 at The Blue Room and receives a torn page from the Trust\u2019s real ledger. Someone she knows is at the bar, watching.',
+    revealedBy: ['matchbox', 'ledger_page', 'blue_room_photo'],
   },
   {
     id: 'packing',
