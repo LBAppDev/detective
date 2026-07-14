@@ -79,7 +79,7 @@ function closeCase() {
     kind: 'accuse',
     title: 'Name the Killer',
     prompt:
-      'Five years, four suspects, one visitor she poured wine for. You get one accusation in front of the family. Say the wrong name, and the file closes for good.',
+      'Five years, five suspects, one visitor she poured wine for \u2014 and two of them share the initials on the cufflink. You get one accusation in front of the family. Say the wrong name, and the file closes for good.',
     culpritId: 'hale',
     failFlag: 'case.failed',
     wrongText: {
@@ -89,6 +89,8 @@ function closeCase() {
         'Nadia was Iris. She risked everything to put the ledger page in Vera\u2019s hands — she\u2019s the reason there\u2019s a case at all. The tip line betrayed them both.',
       ashe:
         'Ashe still had a key, but every thread signs the same initial: the gift tag, the note, the voicemail, the cufflink. \u0022M\u0022 isn\u2019t Gregory.',
+      harrow:
+        'Harrow fits the cufflink \u2014 and nothing else. Vera would never pour two glasses for the man who hand-delivered her threats, the Blue Room meeting was set through a tip line only The Ledger could read, and \u0022I\u2019ll come to you\u0022 is on her answering machine in another man\u2019s voice. The initials match; the trust doesn\u2019t.',
     },
     onSuccess: [
       { flag: FLAGS.caseSolved },
@@ -159,7 +161,7 @@ const OBJECTS: RoomObjectConfig[] = [
       actions: [
         {
           toast:
-            'Silver, monogrammed "M.H." — torn loose in a struggle no accident report ever mentioned.',
+            'Silver, monogrammed "M.H." — torn loose in a struggle no accident report ever mentioned. Two men in this file wear those initials.',
         },
       ],
     },

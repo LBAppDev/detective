@@ -63,12 +63,12 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
   ledger_page: {
     name: 'Torn Ledger Page',
     description:
-      'A page torn from the Halloway Trust\u2019s private ledger \u2014 the page her source passed her at The Blue Room. Recurring payments, going back years, to initials in this order, every month: E.V. \u2026 R.K. \u2026 and M.H. Stamped in the corner: the circle-and-cross mark from her bedroom wall. Three tallies. Three names on the payroll.',
+      'A page torn from the Halloway Trust\u2019s private ledger \u2014 the page her source passed her at The Blue Room. Recurring payments, going back years, to initials in this order, every month: E.V. \u2026 R.K. \u2026 and M.H. Stamped in the corner: the circle-and-cross mark from her bedroom wall. Three tallies. Three names on the payroll \u2014 and two men in this file answer to that last set of initials.',
   },
   voss_letters: {
     name: 'Legal Threats \u2014 Voss',
     description:
-      'Three letters from Councilman Edward Voss\u2019s attorneys, each angrier than the last, demanding Vera drop the Halloway story. Loud. Public. On the record \u2014 which is exactly why they feel like the wrong answer. Killers don\u2019t write first.',
+      'Three letters from Councilman Edward Voss\u2019s attorneys, each angrier than the last, demanding Vera drop the Halloway story. Loud. Public. On the record. The third was never mailed \u2014 it came by hand, and the delivery receipt stapled to it is signed \u0022M. Harrow.\u0022 Voss\u2019s fixer knew this house, and knew the way to her door.',
   },
   story_draft: {
     name: 'Final Draft \u2014 The Halloway Skim',
@@ -95,7 +95,7 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
   wine_gift: {
     name: 'Wine Bottle \u2014 Gift Tag',
     description:
-      'An expensive bottle, brought that night, not from her rack. The handwritten tag: \u0022To the next chapter \u2014 M.\u0022',
+      'An expensive bottle, brought that night, not from her rack. The handwritten tag: \u0022To the next chapter \u2014 M.\u0022 One initial \u2014 and two men in this case own it. The tag alone won\u2019t say which; the words might. \u0022The next chapter\u0022 is how an editor talks.',
   },
   blue_room_photo: {
     name: 'Photograph \u2014 The Blue Room',
@@ -105,14 +105,14 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
   crumpled_note: {
     name: 'Crumpled Note',
     description:
-      'From the kitchen bin: \u0022Keep the ledger page close. I\u2019ll come to you \u2014 M.\u0022 The visitor asked her to have the evidence ready and waiting.',
+      'From the kitchen bin: \u0022Keep the ledger page close. I\u2019ll come to you \u2014 M.\u0022 The visitor asked her to have the evidence ready and waiting. Another lone \u0022M\u0022 \u2014 but read it against the answering machine: \u0022I\u2019ll come to you\u0022 is the voicemail, word for word.',
   },
 
   /* --- Stairwell (Chapter 4) --- */
   cufflink: {
     name: 'Silver Cufflink',
     description:
-      'Wedged under the stair runner, engraved \u0022M.H.\u0022 \u2014 lost in the struggle to move a body no one was supposed to examine closely.',
+      'Wedged under the stair runner, engraved \u0022M.H.\u0022 \u2014 lost in the struggle to move a body no one was supposed to examine closely. Two men in this file wear those initials, and a cufflink won\u2019t say which. Ask instead who she\u2019d have opened the door for.',
   },
   stair_scratches: {
     name: 'Drag Marks',
@@ -133,7 +133,7 @@ export const ITEM_DETAILS: Record<string, ItemDetails> = {
 export const EPILOGUE = {
   title: 'Case Closed \u2014 The Halloway File',
   text:
-    'Marcus Hale. Her mentor \u2014 and the third set of initials on the Trust\u2019s payroll. He killed her story twice: once at the paper, citing \u0022insufficient sourcing,\u0022 and once in her kitchen, with a bottle marked \u0022to the next chapter.\u0022 The tip line told him his own reporter had the proof; the Blue Room mirror caught him watching the handoff; his voicemail kept her home; his cufflink stayed under the runner where he dragged her. The residue, the photograph, the drag marks, and Nadia\u2019s statement go to the district attorney in the morning. Vera\u2019s expos\u00e9 runs the day after \u2014 every word hers, under her byline, five years late. The 11:40 train still leaves on time. Case #47-1014: closed.',
+    'Marcus Hale. Her mentor \u2014 and the third set of initials on the Trust\u2019s payroll. Miles Harrow shared those initials and the taste in cufflinks, and that was the Trust\u2019s insurance: if anyone ever read the ledger, the fixer would take the suspicion. But Vera would never have poured wine for the man who delivered her threats, and Harrow couldn\u2019t read The Ledger\u2019s tip line \u2014 only her editor could do both. Hale killed her story twice: once at the paper, citing \u0022insufficient sourcing,\u0022 and once in her kitchen, with a bottle marked \u0022to the next chapter.\u0022 The tip line told him his own reporter had the proof; the Blue Room mirror caught him watching the handoff; his voicemail kept her home; his cufflink stayed under the runner where he dragged her. The residue, the photograph, the drag marks, and Nadia\u2019s statement go to the district attorney in the morning. Vera\u2019s expos\u00e9 runs the day after \u2014 every word hers, under her byline, five years late. The 11:40 train still leaves on time. Case #47-1014: closed.',
 };
 
 /* ------------------------------------------------------------------ */
@@ -176,6 +176,14 @@ export const SUSPECTS: Suspect[] = [
     linkedClues: ['matchbox', 'ledger_page', 'nadia_statement'],
   },
   {
+    id: 'harrow',
+    name: 'Miles Harrow',
+    role: '\u0022Security consultant,\u0022 Halloway Trust \u2014 Voss\u2019s fixer',
+    portrait: '\ud83d\udd75\ufe0f',
+    bio: 'Ex-detective, paid off the books to make the Trust\u2019s problems quiet. Hand-delivered the final legal threat, so he knew the house \u2014 a neighbor puts his car on her street twice that October. Wears monogrammed silver cufflinks. No alibi for the night of the 14th. His initials: M.H.',
+    linkedClues: ['voss_letters', 'cufflink', 'ledger_page', 'wine_gift', 'crumpled_note'],
+  },
+  {
     id: 'ashe',
     name: 'Gregory Ashe',
     role: 'Ex-fianc\u00e9',
@@ -203,6 +211,12 @@ export const TIMELINE: TimelineEntry[] = [
     time: 'Two weeks before',
     text: 'Marcus Hale kills Vera\u2019s Halloway Trust expos\u00e9 at The Ledger \u2014 \u0022insufficient sourcing.\u0022 She keeps working it alone \u2014 and finishes it.',
     revealedBy: ['cipher_notebook', 'voss_letters', 'story_draft'],
+  },
+  {
+    id: 'hand-delivery',
+    time: 'One week before',
+    text: 'The last legal threat arrives by hand. The receipt is signed M. Harrow \u2014 from here on, two men in this file share one set of initials.',
+    revealedBy: ['voss_letters'],
   },
   {
     id: 'ticket',
